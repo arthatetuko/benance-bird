@@ -16,7 +16,7 @@ body {
 #gameCanvas {
   display: block;
   margin: auto;
-  background: black;
+  background: skyblue;
 }
 
 #ui {
@@ -61,7 +61,6 @@ button:hover {
 // ===== CANVAS =====
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -69,10 +68,6 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
-
-// ===== LOAD SPRITE =====
-const birdImg = new Image();
-birdImg.src = "benance.png";
 
 // ===== GAME VARIABLES =====
 let birdY = 200;
@@ -84,9 +79,6 @@ let highscore = localStorage.getItem("highscore") || 0;
 document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
-let bgOffset = 0;
-let crashFlash = 0;
-let screenShake = 0;
 
 // ===== INPUT =====
 function jump() {
@@ -120,41 +112,16 @@ function gameLoop(timestamp) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // ===== BACKGROUND RETRO =====
-  bgOffset -= 100 * delta;
-  if (bgOffset <= -40) bgOffset = 0;
-
-  for (let x = bgOffset; x < canvas.width; x += 40) {
-    ctx.fillStyle = "#111122";
-    ctx.fillRect(x, 0, 20, canvas.height);
-  }
-
-  // ===== SCREEN SHAKE =====
-  let shakeX = (Math.random() - 0.5) * screenShake;
-  let shakeY = (Math.random() - 0.5) * screenShake;
-  ctx.save();
-  ctx.translate(shakeX, shakeY);
-
-  // ===== PHYSICS =====
+  // physics
   velocity += gravity * delta;
   birdY += velocity * delta;
 
-  // ===== SPRITE ANIMATION (3 FRAME) =====
-  const frameWidth = birdImg.width / 3;
-  const frameHeight = birdImg.height;
-  const currentFrame = Math.floor(Date.now() / 150) % 3;
+  // bird
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(100, birdY, 30, 30);
 
-  ctx.drawImage(
-    birdImg,
-    currentFrame * frameWidth, 0,
-    frameWidth, frameHeight,
-    100, birdY,
-    80, 80
-  );
-
-  // ===== PIPES =====
-  ctx.fillStyle = "#00ff88";
-
+  // pipes
+  ctx.fillStyle = "green";
   pipes.forEach(pipe => {
     pipe.x -= 200 * delta;
 
@@ -164,31 +131,19 @@ function gameLoop(timestamp) {
     // collision
     if (
       100 < pipe.x + 50 &&
-      180 > pipe.x &&
-      (birdY < pipe.top || birdY + 80 > pipe.bottom)
+      130 > pipe.x &&
+      (birdY < pipe.top || birdY + 30 > pipe.bottom)
     ) {
       resetGame();
     }
 
+    // scoring
     if (!pipe.passed && pipe.x < 100) {
       pipe.passed = true;
       score++;
       document.getElementById("score").innerText = score;
     }
   });
-
-  ctx.restore();
-
-  // ===== CRASH FLASH =====
-  if (crashFlash > 0) {
-    ctx.fillStyle = "rgba(255,0,0," + crashFlash + ")";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    crashFlash -= delta;
-  }
-
-  if (screenShake > 0) {
-    screenShake -= 40 * delta;
-  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -207,9 +162,6 @@ function resetGame() {
   pipes = [];
   birdY = 200;
   velocity = 0;
-
-  crashFlash = 1;
-  screenShake = 20;
 }
 
 // ===== WALLET (KEPLR) =====
