@@ -100,8 +100,25 @@ document.addEventListener("touchstart", jump);
 
 loop();
 </script>
+<script src="https://unpkg.com/@keplr-wallet/provider@latest/dist/index.min.js"></script>
+<button onclick="connectWallet()">Connect Wallet</button>
+<p id="walletAddress"></p>
+async function connectWallet() {
+  if (!window.keplr) {
+    alert("Please install Keplr wallet");
+    return;
+  }
+
+  await window.keplr.enable("columbus-5"); // Terra Classic chain id
+  const offlineSigner = window.keplr.getOfflineSigner("columbus-5");
+  const accounts = await offlineSigner.getAccounts();
+  const address = accounts[0].address;
+
+  document.getElementById("walletAddress").innerText = address;
+}
 
 </body>
 </html>
+
 
 
