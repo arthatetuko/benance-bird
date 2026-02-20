@@ -16,7 +16,8 @@ body {
 #gameCanvas {
   display: block;
   margin: auto;
-  background: skyblue;
+  background: #5bb7be;
+  image-rendering: pixelated;
 }
 
 #ui {
@@ -69,6 +70,10 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
+// ===== LOAD IMAGE =====
+const birdImg = new Image();
+birdImg.src = "terra.png"; // pastikan file ada di repo
+
 // ===== GAME VARIABLES =====
 let birdY = 200;
 let velocity = 0;
@@ -79,6 +84,7 @@ let highscore = localStorage.getItem("highscore") || 0;
 document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
+let birdSize = 60;
 
 // ===== INPUT =====
 function jump() {
@@ -88,12 +94,11 @@ function jump() {
 window.addEventListener("keydown", e => {
   if (e.code === "Space") jump();
 });
-
 window.addEventListener("touchstart", jump);
 
 // ===== PIPE SPAWN =====
 function createPipe() {
-  const gap = 180;
+  const gap = 200;
   const top = Math.random() * (canvas.height - gap - 100) + 50;
 
   pipes.push({
@@ -107,32 +112,44 @@ setInterval(createPipe, 2000);
 
 // ===== GAME LOOP =====
 function gameLoop(timestamp) {
+
   const delta = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // ===== RETRO BACKGROUND =====
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.fillStyle = y % 80 === 0 ? "#70c5ce" : "#5bb7be";
+    ctx.fillRect(0, y, canvas.width, 40);
+  }
+
   // physics
   velocity += gravity * delta;
   birdY += velocity * delta;
 
-  // bird
-  ctx.fillStyle = "yellow";
-  ctx.fillRect(100, birdY, 30, 30);
+  // bird image
+  ctx.drawImage(
+    birdImg,
+    100,
+    birdY,
+    birdSize,
+    birdSize
+  );
 
   // pipes
   ctx.fillStyle = "green";
   pipes.forEach(pipe => {
     pipe.x -= 200 * delta;
 
-    ctx.fillRect(pipe.x, 0, 50, pipe.top);
-    ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height);
+    ctx.fillRect(pipe.x, 0, 70, pipe.top);
+    ctx.fillRect(pipe.x, pipe.bottom, 70, canvas.height);
 
     // collision
     if (
-      100 < pipe.x + 50 &&
-      130 > pipe.x &&
-      (birdY < pipe.top || birdY + 30 > pipe.bottom)
+      100 < pipe.x + 70 &&
+      100 + birdSize > pipe.x &&
+      (birdY < pipe.top || birdY + birdSize > pipe.bottom)
     ) {
       resetGame();
     }
@@ -147,10 +164,11 @@ function gameLoop(timestamp) {
 
   requestAnimationFrame(gameLoop);
 }
-requestAnimationFrame(gameLoop);
+birdImg.onload = () => requestAnimationFrame(gameLoop);
 
 // ===== RESET =====
 function resetGame() {
+
   if (score > highscore) {
     highscore = score;
     localStorage.setItem("highscore", highscore);
@@ -168,20 +186,26 @@ function resetGame() {
 let connectedWallet = null;
 
 async function connectWallet() {
+
   if (!window.keplr) {
-    alert("Keplr tidak terdeteksi (Desktop only)");
+    alert("Keplr tidak terdeteksi (Gunakan Desktop + Extension)");
     return;
   }
 
   try {
     await window.keplr.enable("columbus-5");
-    const offlineSigner = window.getOfflineSigner("columbus-5");
-    const accounts = await offlineSigner.getAccounts();
+
+    const offlineSigner =
+      window.getOfflineSigner("columbus-5");
+
+    const accounts =
+      await offlineSigner.getAccounts();
 
     connectedWallet = accounts[0].address;
 
     document.getElementById("walletStatus").innerText =
-      "Wallet: " + connectedWallet;
+      "Wallet: " + connectedWallet.slice(0,10) + "...";
+
   } catch (err) {
     console.log(err);
     alert("Gagal connect wallet");
