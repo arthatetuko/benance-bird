@@ -28,13 +28,19 @@ body {
 }
 
 button {
-  padding: 8px 12px;
+  padding: 6px 10px;
   margin-top: 5px;
+  margin-right: 5px;
   border: none;
   background: #ff9900;
   color: white;
   font-weight: bold;
   border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.8;
 }
 </style>
 </head>
@@ -44,6 +50,7 @@ button {
 <div id="ui">
   <div id="walletStatus">Wallet: Not Connected</div>
   <button onclick="connectWallet()">Connect Keplr</button>
+  <button onclick="disconnectWallet()">Disconnect</button>
   <div>Score: <span id="score">0</span></div>
   <div>Highscore: <span id="highscore">0</span></div>
 </div>
@@ -51,7 +58,7 @@ button {
 <canvas id="gameCanvas"></canvas>
 
 <script>
-// ===== CANVAS SETUP =====
+// ===== CANVAS =====
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -65,49 +72,58 @@ window.addEventListener("resize", resizeCanvas);
 // ===== GAME VARIABLES =====
 let birdY = 200;
 let velocity = 0;
-let gravity = 0.6;
+let gravity = 1200;
 let pipes = [];
 let score = 0;
 let highscore = localStorage.getItem("highscore") || 0;
 document.getElementById("highscore").innerText = highscore;
 
-// ===== BIRD JUMP =====
+let lastTime = 0;
+
+// ===== INPUT =====
 function jump() {
-  velocity = -10;
+  velocity = -450;
 }
+
 window.addEventListener("keydown", e => {
   if (e.code === "Space") jump();
 });
+
 window.addEventListener("touchstart", jump);
 
-// ===== CREATE PIPES =====
+// ===== PIPE SPAWN =====
 function createPipe() {
-  const gap = 150;
+  const gap = 180;
   const top = Math.random() * (canvas.height - gap - 100) + 50;
+
   pipes.push({
     x: canvas.width,
     top: top,
-    bottom: top + gap
+    bottom: top + gap,
+    passed: false
   });
 }
 setInterval(createPipe, 2000);
 
 // ===== GAME LOOP =====
-function gameLoop() {
+function gameLoop(timestamp) {
+  const delta = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // bird physics
-  velocity += gravity;
-  birdY += velocity;
+  // physics
+  velocity += gravity * delta;
+  birdY += velocity * delta;
 
-  // draw bird
+  // bird
   ctx.fillStyle = "yellow";
   ctx.fillRect(100, birdY, 30, 30);
 
   // pipes
   ctx.fillStyle = "green";
   pipes.forEach(pipe => {
-    pipe.x -= 3;
+    pipe.x -= 200 * delta;
 
     ctx.fillRect(pipe.x, 0, 50, pipe.top);
     ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height);
@@ -115,14 +131,15 @@ function gameLoop() {
     // collision
     if (
       100 < pipe.x + 50 &&
-      100 + 30 > pipe.x &&
+      130 > pipe.x &&
       (birdY < pipe.top || birdY + 30 > pipe.bottom)
     ) {
       resetGame();
     }
 
-    // score
-    if (pipe.x === 97) {
+    // scoring
+    if (!pipe.passed && pipe.x < 100) {
+      pipe.passed = true;
       score++;
       document.getElementById("score").innerText = score;
     }
@@ -130,7 +147,7 @@ function gameLoop() {
 
   requestAnimationFrame(gameLoop);
 }
-gameLoop();
+requestAnimationFrame(gameLoop);
 
 // ===== RESET =====
 function resetGame() {
@@ -139,6 +156,7 @@ function resetGame() {
     localStorage.setItem("highscore", highscore);
     document.getElementById("highscore").innerText = highscore;
   }
+
   score = 0;
   document.getElementById("score").innerText = 0;
   pipes = [];
@@ -146,10 +164,12 @@ function resetGame() {
   velocity = 0;
 }
 
-// ===== WALLET CONNECT (KEPLR) =====
+// ===== WALLET (KEPLR) =====
+let connectedWallet = null;
+
 async function connectWallet() {
   if (!window.keplr) {
-    alert("Keplr Wallet tidak terdeteksi (Desktop only)");
+    alert("Keplr tidak terdeteksi (Desktop only)");
     return;
   }
 
@@ -157,12 +177,21 @@ async function connectWallet() {
     await window.keplr.enable("columbus-5");
     const offlineSigner = window.getOfflineSigner("columbus-5");
     const accounts = await offlineSigner.getAccounts();
+
+    connectedWallet = accounts[0].address;
+
     document.getElementById("walletStatus").innerText =
-      "Wallet: " + accounts[0].address;
+      "Wallet: " + connectedWallet;
   } catch (err) {
     console.log(err);
     alert("Gagal connect wallet");
   }
+}
+
+function disconnectWallet() {
+  connectedWallet = null;
+  document.getElementById("walletStatus").innerText =
+    "Wallet: Not Connected";
 }
 </script>
 
