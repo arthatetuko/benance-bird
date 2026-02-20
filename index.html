@@ -1,58 +1,170 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BENANCE Bird</title>
+<title>Flappy Terra Classic</title>
 
 <style>
-body { 
-  margin:0; 
-  background:#0b0f2a; 
-  overflow:hidden; 
-  touch-action:none;
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: Arial, sans-serif;
 }
 
-canvas { 
-  display:block; 
+#gameCanvas {
+  display: block;
+  margin: auto;
+  background: skyblue;
 }
 
-#score { 
-  position:absolute; 
-  top:20px; 
-  left:50%; 
-  transform:translateX(-50%);
-  color:white; 
-  font-size:30px; 
-  font-family:Arial; 
-}
-
-#walletUI {
-  position:absolute;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  text-align:center;
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  z-index: 10;
 }
 
 button {
-  padding:10px 20px;
-  font-size:16px;
-  border:none;
-  border-radius:8px;
-  background:#ffcc00;
-  cursor:pointer;
+  padding: 8px 12px;
+  margin-top: 5px;
+  border: none;
+  background: #ff9900;
+  color: white;
+  font-weight: bold;
+  border-radius: 5px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="score">0</div>
-<canvas id="game"></canvas>
-
-<div id="walletUI">
-  <button onclick="connectWallet()">Connect Wallet</button>
-  <p id="walletAddress" style="color:white;font-size:12px;"></p>
+<div id="ui">
+  <div id="walletStatus">Wallet: Not Connected</div>
+  <button onclick="connectWallet()">Connect Keplr</button>
+  <div>Score: <span id="score">0</span></div>
+  <div>Highscore: <span id="highscore">0</span></div>
 </div>
 
-<script src="https://unpkg.com/@keplr-wal
+<canvas id="gameCanvas"></canvas>
+
+<script>
+// ===== CANVAS SETUP =====
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// ===== GAME VARIABLES =====
+let birdY = 200;
+let velocity = 0;
+let gravity = 0.6;
+let pipes = [];
+let score = 0;
+let highscore = localStorage.getItem("highscore") || 0;
+document.getElementById("highscore").innerText = highscore;
+
+// ===== BIRD JUMP =====
+function jump() {
+  velocity = -10;
+}
+window.addEventListener("keydown", e => {
+  if (e.code === "Space") jump();
+});
+window.addEventListener("touchstart", jump);
+
+// ===== CREATE PIPES =====
+function createPipe() {
+  const gap = 150;
+  const top = Math.random() * (canvas.height - gap - 100) + 50;
+  pipes.push({
+    x: canvas.width,
+    top: top,
+    bottom: top + gap
+  });
+}
+setInterval(createPipe, 2000);
+
+// ===== GAME LOOP =====
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // bird physics
+  velocity += gravity;
+  birdY += velocity;
+
+  // draw bird
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(100, birdY, 30, 30);
+
+  // pipes
+  ctx.fillStyle = "green";
+  pipes.forEach(pipe => {
+    pipe.x -= 3;
+
+    ctx.fillRect(pipe.x, 0, 50, pipe.top);
+    ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height);
+
+    // collision
+    if (
+      100 < pipe.x + 50 &&
+      100 + 30 > pipe.x &&
+      (birdY < pipe.top || birdY + 30 > pipe.bottom)
+    ) {
+      resetGame();
+    }
+
+    // score
+    if (pipe.x === 97) {
+      score++;
+      document.getElementById("score").innerText = score;
+    }
+  });
+
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// ===== RESET =====
+function resetGame() {
+  if (score > highscore) {
+    highscore = score;
+    localStorage.setItem("highscore", highscore);
+    document.getElementById("highscore").innerText = highscore;
+  }
+  score = 0;
+  document.getElementById("score").innerText = 0;
+  pipes = [];
+  birdY = 200;
+  velocity = 0;
+}
+
+// ===== WALLET CONNECT (KEPLR) =====
+async function connectWallet() {
+  if (!window.keplr) {
+    alert("Keplr Wallet tidak terdeteksi (Desktop only)");
+    return;
+  }
+
+  try {
+    await window.keplr.enable("columbus-5");
+    const offlineSigner = window.getOfflineSigner("columbus-5");
+    const accounts = await offlineSigner.getAccounts();
+    document.getElementById("walletStatus").innerText =
+      "Wallet: " + accounts[0].address;
+  } catch (err) {
+    console.log(err);
+    alert("Gagal connect wallet");
+  }
+}
+</script>
+
+</body>
+</html>
