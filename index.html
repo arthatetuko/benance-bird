@@ -41,7 +41,7 @@ button {
   width: 230px;
 }
 
-#menuBox {
+#menuBox, #connectChoice {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -50,6 +50,12 @@ button {
   padding: 30px;
   border-radius: 10px;
   text-align: center;
+}
+
+.panel {
+  display: none;
+  text-align: center;
+  margin-top: 50px;
 }
 </style>
 </head>
@@ -62,10 +68,27 @@ button {
   <div>Highscore: <span id="highscore">0</span></div>
 </div>
 
+<!-- MAIN MENU -->
 <div id="menuBox">
   <h2>Main Menu</h2>
-  <button onclick="startGame()">Play Game</button>
+  <button onclick="showConnectOptions()">Play Game</button><br>
+  <button onclick="showLeaderboard()">Leaderboard</button><br>
+  <button onclick="showStatistic()">Statistic</button><br>
+  <button onclick="showRedeem()">Redeem</button><br>
+  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
 </div>
+
+<!-- CONNECT CHOICE -->
+<div id="connectChoice" style="display:none;">
+  <h3>Choose Wallet</h3>
+  <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
+  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
+  <button onclick="backToMenu()">Back</button>
+</div>
+
+<div id="leaderboardBox" class="panel"></div>
+<div id="statBox" class="panel"></div>
+<div id="redeemBox" class="panel"></div>
 
 <canvas id="gameCanvas"></canvas>
 
@@ -110,43 +133,21 @@ const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
 
-// ===== DEVICE DETECT =====
-function isMobile() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+// ===== MENU CONTROL =====
+function showConnectOptions(){
+  document.getElementById("menuBox").style.display="none";
+  document.getElementById("connectChoice").style.display="block";
 }
 
-// ===== START GAME =====
-async function startGame(){
-
-  // MOBILE
-  if(isMobile()){
-
-    // If opened inside Keplr mobile browser
-    if(window.keplr){
-      await connectWallet();
-    } else {
-      alert("Please open this game inside Keplr Mobile Browser.");
-      return;
-    }
-
-  } else {
-    // DESKTOP
-    await connectWallet();
-  }
-
-  if(walletConnected){
-    document.getElementById("menuBox").style.display="none";
-    document.getElementById("ui").style.display="block";
-    canvas.style.display="block";
-    gameRunning = true;
-  }
+function backToMenu(){
+  document.getElementById("connectChoice").style.display="none";
+  document.getElementById("menuBox").style.display="block";
 }
 
-// ===== CONNECT WALLET =====
-async function connectWallet(){
-
+// ===== DESKTOP CONNECT =====
+async function connectDesktop(){
   if(!window.keplr){
-    alert("Keplr not detected.");
+    alert("Keplr Extension not detected");
     return;
   }
 
@@ -158,15 +159,39 @@ async function connectWallet(){
     connectedWallet = accounts[0].address;
     walletConnected = true;
 
-    document.getElementById("walletStatus").innerText =
-      "Wallet: " + connectedWallet.slice(0,10) + "...";
-
+    startGame();
   }catch{
     alert("Connection failed");
   }
 }
 
-// ===== INPUT =====
+// ===== MOBILE CONNECT (DEEPLINK) =====
+function connectMobile(){
+
+  const currentUrl = window.location.href;
+
+  // Deep link for Keplr mobile
+  const deepLink =
+    "keplrwallet://wc?uri=" + encodeURIComponent(currentUrl);
+
+  window.location.href = deepLink;
+
+  alert("If Keplr Mobile does not open, please open this site inside Keplr browser.");
+}
+
+// ===== START GAME =====
+function startGame(){
+  document.getElementById("connectChoice").style.display="none";
+  document.getElementById("ui").style.display="block";
+  canvas.style.display="block";
+
+  document.getElementById("walletStatus").innerText =
+    "Wallet: " + connectedWallet.slice(0,10) + "...";
+
+  gameRunning = true;
+}
+
+// ===== GAME INPUT =====
 function jump(){
   if(!gameRunning) return;
 
@@ -239,6 +264,7 @@ function gameLoop(timestamp){
       ctx.fillStyle="black";
       ctx.font="30px Arial";
       ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+      saveLeaderboard();
     }
   }
 
@@ -255,6 +281,13 @@ function resetGame(){
   birdY=200;
   pipeTimer=0;
   gameOver=false;
+}
+
+// ===== SAVE LEADERBOARD =====
+function saveLeaderboard(){
+  let data = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  data.push({wallet:connectedWallet,score:score});
+  localStorage.setItem("leaderboard",JSON.stringify(data));
 }
 
 // ===== DISCONNECT =====
