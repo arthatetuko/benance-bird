@@ -64,7 +64,7 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD IMAGE (3 FRAME SPRITE) =====
+// ===== LOAD IMAGE (STATIC) =====
 const birdImg = new Image();
 birdImg.src = "terra.png";
 
@@ -91,11 +91,6 @@ const birdSize = 60;
 const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
-
-// ===== ANIMATION =====
-let frameIndex = 0;
-let frameTimer = 0;
-let frameInterval = 0.12; // detik per frame
 
 // ===== INPUT =====
 function jump() {
@@ -143,13 +138,6 @@ function gameLoop(timestamp) {
     velocity += gravity * delta;
     birdY += velocity * delta;
 
-    // Animation update
-    frameTimer += delta;
-    if (frameTimer > frameInterval) {
-      frameIndex = (frameIndex + 1) % 3;
-      frameTimer = 0;
-    }
-
     pipeTimer += delta;
     if (pipeTimer > pipeInterval) {
       createPipe();
@@ -190,16 +178,9 @@ function gameLoop(timestamp) {
     }
   }
 
-  // ===== DRAW BIRD (SPRITE FRAME)
-  const frameWidth = birdImg.width / 3;
-  const frameHeight = birdImg.height;
-
+  // ===== DRAW BIRD (STATIC FULL IMAGE)
   ctx.drawImage(
     birdImg,
-    frameIndex * frameWidth,
-    0,
-    frameWidth,
-    frameHeight,
     100,
     birdY,
     birdSize,
