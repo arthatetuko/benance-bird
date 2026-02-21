@@ -60,9 +60,12 @@ button:hover {
 <canvas id="gameCanvas"></canvas>
 
 <script>
-// ===== CANVAS =====
+// ===== CANVAS (OPTIMIZED CONTEXT) =====
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", {
+  alpha: false,
+  desynchronized: true
+});
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -79,17 +82,27 @@ birdImg.src = "terra.png";
 let birdY = 200;
 let velocity = 0;
 let gravity = 1200;
+let jumpForce = -450;
+
 let pipes = [];
 let score = 0;
 let highscore = localStorage.getItem("highscore") || 0;
 document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
+let running = true;
+
 let birdSize = 60;
+let pipeWidth = 70;
+let pipeGap = 200;
+let pipeSpeed = 200;
+
+let pipeTimer = 0;
+let pipeInterval = 2; // detik
 
 // ===== INPUT =====
 function jump() {
-  velocity = -450;
+  velocity = jumpForce;
 }
 
 window.addEventListener("keydown", e => {
@@ -97,65 +110,86 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("touchstart", jump);
 
-// ===== PIPE SPAWN =====
+// ===== PIPE SPAWN (TIME BASED) =====
 function createPipe() {
-  const gap = 200;
-  const top = Math.random() * (canvas.height - gap - 100) + 50;
+  const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
 
   pipes.push({
     x: canvas.width,
     top: top,
-    bottom: top + gap,
+    bottom: top + pipeGap,
     passed: false
   });
 }
-setInterval(createPipe, 2000);
 
 // ===== GAME LOOP =====
 function gameLoop(timestamp) {
 
-  const delta = (timestamp - lastTime) / 1000;
+  if (!running) return;
+
+  if (!lastTime) lastTime = timestamp;
+
+  let delta = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
+
+  // LIMIT DELTA (ANTI LAG SPIKE)
+  if (delta > 0.033) delta = 0.033;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // physics
+  // ===== PHYSICS =====
   velocity += gravity * delta;
   birdY += velocity * delta;
 
-  // bird image
-  ctx.drawImage(
-    birdImg,
-    100,
-    birdY,
-    birdSize,
-    birdSize
-  );
+  // ===== DRAW BIRD =====
+  ctx.drawImage(birdImg, 100, birdY, birdSize, birdSize);
 
-  // pipes (BIRU GELAP)
+  // ===== PIPE TIMER =====
+  pipeTimer += delta;
+  if (pipeTimer >= pipeInterval) {
+    createPipe();
+    pipeTimer = 0;
+  }
+
+  // ===== PIPES =====
   ctx.fillStyle = "#003366";
-  pipes.forEach(pipe => {
-    pipe.x -= 200 * delta;
 
-    ctx.fillRect(pipe.x, 0, 70, pipe.top);
-    ctx.fillRect(pipe.x, pipe.bottom, 70, canvas.height);
+  for (let i = pipes.length - 1; i >= 0; i--) {
+
+    const pipe = pipes[i];
+    pipe.x -= pipeSpeed * delta;
+
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+    ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height);
 
     // collision
     if (
-      100 < pipe.x + 70 &&
+      100 < pipe.x + pipeWidth &&
       100 + birdSize > pipe.x &&
       (birdY < pipe.top || birdY + birdSize > pipe.bottom)
     ) {
       resetGame();
+      return;
     }
 
-    // scoring
+    // score
     if (!pipe.passed && pipe.x < 100) {
       pipe.passed = true;
       score++;
       document.getElementById("score").innerText = score;
     }
-  });
+
+    // remove offscreen (hemat memory)
+    if (pipe.x < -pipeWidth) {
+      pipes.splice(i, 1);
+    }
+  }
+
+  // ground collision
+  if (birdY > canvas.height - birdSize) {
+    resetGame();
+    return;
+  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -173,10 +207,21 @@ function resetGame() {
 
   score = 0;
   document.getElementById("score").innerText = 0;
+
   pipes = [];
   birdY = 200;
   velocity = 0;
+  pipeTimer = 0;
 }
+
+// ===== VISIBILITY FIX (PENTING DI WALLET BROWSER) =====
+document.addEventListener("visibilitychange", () => {
+  running = !document.hidden;
+  if (running) {
+    lastTime = 0;
+    requestAnimationFrame(gameLoop);
+  }
+});
 
 // ===== WALLET (KEPLR) =====
 let connectedWallet = null;
