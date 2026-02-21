@@ -51,6 +51,9 @@ button {
 
 <canvas id="gameCanvas"></canvas>
 
+<!-- Hidden GIF element -->
+<img id="birdGif" src="terra.gif" style="display:none;" />
+
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -62,11 +65,10 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD GIF (ANIMATED)
-const birdImg = new Image();
-birdImg.src = "terra.gif"; // GANTI dengan nama GIF kamu
+// ===== GET GIF FROM DOM (BROWSER HANDLES ANIMATION)
+const birdGif = document.getElementById("birdGif");
 
-// ===== GAME STATE
+// ===== GAME STATE =====
 let walletConnected = false;
 
 let birdY = 200;
@@ -90,8 +92,9 @@ const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
 
-// ===== INPUT
+// ===== INPUT =====
 function jump() {
+
   if (!walletConnected) return;
 
   if (gameOver) {
@@ -107,7 +110,7 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("touchstart", jump);
 
-// ===== PIPE SPAWN
+// ===== PIPE SPAWN =====
 function createPipe() {
   const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
   pipes.push({
@@ -118,7 +121,7 @@ function createPipe() {
   });
 }
 
-// ===== GAME LOOP
+// ===== GAME LOOP =====
 function gameLoop(timestamp) {
 
   if (!lastTime) lastTime = timestamp;
@@ -175,8 +178,16 @@ function gameLoop(timestamp) {
     }
   }
 
-  // ===== DRAW GIF (AUTO ANIMATED)
-  ctx.drawImage(birdImg, 100, birdY, birdSize, birdSize);
+  // ===== DRAW GIF FRAME (WORKING FIX)
+  if (birdGif.complete) {
+    ctx.drawImage(
+      birdGif,
+      100,
+      birdY,
+      birdSize,
+      birdSize
+    );
+  }
 
   if (!walletConnected) {
     ctx.fillStyle = "black";
@@ -195,9 +206,9 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
-birdImg.onload = () => requestAnimationFrame(gameLoop);
+birdGif.onload = () => requestAnimationFrame(gameLoop);
 
-// ===== RESET
+// ===== RESET =====
 function resetGame() {
 
   if (score > highscore) {
@@ -216,7 +227,7 @@ function resetGame() {
   gameOver = false;
 }
 
-// ===== WALLET
+// ===== WALLET =====
 let connectedWallet = null;
 
 async function connectWallet() {
