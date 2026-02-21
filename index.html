@@ -38,10 +38,10 @@ button {
   color: white;
   border-radius: 5px;
   cursor: pointer;
-  width: 220px;
+  width: 230px;
 }
 
-#menuBox {
+#menuBox, #connectChoice {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -68,14 +68,22 @@ button {
   <div>Highscore: <span id="highscore">0</span></div>
 </div>
 
-<!-- MENU -->
+<!-- MAIN MENU -->
 <div id="menuBox">
   <h2>Main Menu</h2>
-  <button onclick="startGame()">Play Game</button><br>
+  <button onclick="showConnectOptions()">Play Game</button><br>
   <button onclick="showLeaderboard()">Leaderboard</button><br>
   <button onclick="showStatistic()">Statistic</button><br>
   <button onclick="showRedeem()">Redeem</button><br>
   <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
+</div>
+
+<!-- CONNECT CHOICE -->
+<div id="connectChoice" style="display:none;">
+  <h3>Choose Wallet</h3>
+  <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
+  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
+  <button onclick="backToMenu()">Back</button>
 </div>
 
 <div id="leaderboardBox" class="panel"></div>
@@ -99,9 +107,10 @@ window.addEventListener("resize", resizeCanvas);
 const birdImg = new Image();
 birdImg.src = "terra.png";
 
-// ===== GAME STATE =====
+// ===== STATE =====
 let walletConnected = false;
 let connectedWallet = null;
+let gameRunning = false;
 
 let birdY = 200;
 let velocity = 0;
@@ -118,88 +127,71 @@ document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
 let gameOver = false;
-let gameRunning = false;
 
 const birdSize = 60;
 const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
 
-// ===== START GAME (CONNECT HERE) =====
-async function startGame(){
+// ===== MENU CONTROL =====
+function showConnectOptions(){
+  document.getElementById("menuBox").style.display="none";
+  document.getElementById("connectChoice").style.display="block";
+}
 
-  if(!walletConnected){
-    if(!window.keplr){
-      alert("Keplr not detected");
-      return;
-    }
+function backToMenu(){
+  document.getElementById("connectChoice").style.display="none";
+  document.getElementById("menuBox").style.display="block";
+}
 
-    try{
-      await window.keplr.enable("columbus-5");
-      const offlineSigner = window.getOfflineSigner("columbus-5");
-      const accounts = await offlineSigner.getAccounts();
-
-      connectedWallet = accounts[0].address;
-      walletConnected = true;
-
-      document.getElementById("walletStatus").innerText =
-        "Wallet: " + connectedWallet.slice(0,10) + "...";
-
-    }catch{
-      alert("Wallet connection failed");
-      return;
-    }
+// ===== DESKTOP CONNECT =====
+async function connectDesktop(){
+  if(!window.keplr){
+    alert("Keplr Extension not detected");
+    return;
   }
 
-  document.getElementById("menuBox").style.display="none";
+  try{
+    await window.keplr.enable("columbus-5");
+    const signer = window.getOfflineSigner("columbus-5");
+    const accounts = await signer.getAccounts();
+
+    connectedWallet = accounts[0].address;
+    walletConnected = true;
+
+    startGame();
+  }catch{
+    alert("Connection failed");
+  }
+}
+
+// ===== MOBILE CONNECT (DEEPLINK) =====
+function connectMobile(){
+
+  const currentUrl = window.location.href;
+
+  // Deep link for Keplr mobile
+  const deepLink =
+    "keplrwallet://wc?uri=" + encodeURIComponent(currentUrl);
+
+  window.location.href = deepLink;
+
+  alert("If Keplr Mobile does not open, please open this site inside Keplr browser.");
+}
+
+// ===== START GAME =====
+function startGame(){
+  document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
   canvas.style.display="block";
+
+  document.getElementById("walletStatus").innerText =
+    "Wallet: " + connectedWallet.slice(0,10) + "...";
 
   gameRunning = true;
 }
 
-// ===== MENU PANELS =====
-function showLeaderboard(){
-  let data = JSON.parse(localStorage.getItem("leaderboard")) || [];
-  let html = "<h3>Leaderboard</h3>";
-  data.sort((a,b)=>b.score-a.score);
-  data.slice(0,10).forEach(d=>{
-    html += `<div>${d.wallet.slice(0,8)}... : ${d.score}</div>`;
-  });
-  html += "<br><button onclick='closePanel()'>Back</button>";
-  document.getElementById("leaderboardBox").innerHTML = html;
-  document.getElementById("leaderboardBox").style.display="block";
-  document.getElementById("menuBox").style.display="none";
-}
-
-function showStatistic(){
-  let total = localStorage.getItem("totalReward") || 0;
-  document.getElementById("statBox").innerHTML =
-    `<h3>Statistic</h3>
-     <div>Total Reward Distributed:</div>
-     <div>${total} LUNC</div>
-     <br><button onclick='closePanel()'>Back</button>`;
-  document.getElementById("statBox").style.display="block";
-  document.getElementById("menuBox").style.display="none";
-}
-
-function showRedeem(){
-  document.getElementById("redeemBox").innerHTML =
-    `<h3>Redeem Score</h3>
-     <div>Coming Soon</div>
-     <br><button onclick='closePanel()'>Back</button>`;
-  document.getElementById("redeemBox").style.display="block";
-  document.getElementById("menuBox").style.display="none";
-}
-
-function closePanel(){
-  document.getElementById("leaderboardBox").style.display="none";
-  document.getElementById("statBox").style.display="none";
-  document.getElementById("redeemBox").style.display="none";
-  document.getElementById("menuBox").style.display="block";
-}
-
-// ===== INPUT =====
+// ===== GAME INPUT =====
 function jump(){
   if(!gameRunning) return;
 
