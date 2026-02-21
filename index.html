@@ -14,7 +14,7 @@ body {
 }
 
 #gameCanvas {
-  display: block;
+  display: none;
   margin: auto;
   background: #FFD700;
   image-rendering: pixelated;
@@ -30,14 +30,33 @@ body {
 }
 
 button {
-  padding: 6px 10px;
-  margin-top: 5px;
-  margin-right: 5px;
+  padding: 10px;
+  margin: 5px;
   border: none;
   background: #003366;
   color: white;
   border-radius: 5px;
   cursor: pointer;
+  width: 200px;
+}
+
+/* ===== MENU BOX ===== */
+#menuBox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  background: #FFD700;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+  display: none;
+}
+
+#leaderboardBox,
+#statBox,
+#redeemBox {
+  display: none;
 }
 </style>
 </head>
@@ -50,6 +69,21 @@ button {
   <div>Score: <span id="score">0</span></div>
   <div>Highscore: <span id="highscore">0</span></div>
 </div>
+
+<!-- ===== MENU ===== -->
+<div id="menuBox">
+  <h2>Main Menu</h2>
+  <button onclick="startGame()">Play Game</button><br>
+  <button onclick="showLeaderboard()">Leaderboard</button><br>
+  <button onclick="showStatistic()">Statistic</button><br>
+  <button onclick="showRedeem()">Redeem</button><br>
+  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
+</div>
+
+<!-- Sub Panels -->
+<div id="leaderboardBox" style="text-align:center;"></div>
+<div id="statBox" style="text-align:center;"></div>
+<div id="redeemBox" style="text-align:center;"></div>
 
 <canvas id="gameCanvas"></canvas>
 
@@ -64,12 +98,13 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD IMAGE (STATIC) =====
+// ===== LOAD IMAGE =====
 const birdImg = new Image();
 birdImg.src = "terra.png";
 
 // ===== GAME STATE =====
 let walletConnected = false;
+let connectedWallet = null;
 
 let birdY = 200;
 let velocity = 0;
@@ -86,187 +121,183 @@ document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
 let gameOver = false;
+let gameRunning = false;
 
 const birdSize = 60;
 const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
 
+// ===== MENU CONTROL =====
+function startGame(){
+  if(!walletConnected){
+    alert("Connect wallet first!");
+    return;
+  }
+  document.getElementById("menuBox").style.display="none";
+  canvas.style.display="block";
+  gameRunning = true;
+}
+
+function showLeaderboard(){
+  let data = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  let html = "<h3>Leaderboard</h3>";
+  data.sort((a,b)=>b.score-a.score);
+  data.forEach(d=>{
+    html += `<div>${d.wallet.slice(0,8)}... : ${d.score}</div>`;
+  });
+  html += "<br><button onclick='closePanel()'>Back</button>";
+  document.getElementById("leaderboardBox").innerHTML = html;
+  document.getElementById("leaderboardBox").style.display="block";
+}
+
+function showStatistic(){
+  let total = localStorage.getItem("totalReward") || 0;
+  document.getElementById("statBox").innerHTML =
+    `<h3>Statistic</h3>
+     <div>Total Reward Distributed:</div>
+     <div>${total} LUNC</div>
+     <br><button onclick='closePanel()'>Back</button>`;
+  document.getElementById("statBox").style.display="block";
+}
+
+function showRedeem(){
+  document.getElementById("redeemBox").innerHTML =
+    `<h3>Redeem Score</h3>
+     <div>Your Score: ${score}</div>
+     <div>Redeem feature coming soon</div>
+     <br><button onclick='closePanel()'>Back</button>`;
+  document.getElementById("redeemBox").style.display="block";
+}
+
+function closePanel(){
+  document.getElementById("leaderboardBox").style.display="none";
+  document.getElementById("statBox").style.display="none";
+  document.getElementById("redeemBox").style.display="none";
+}
+
 // ===== INPUT =====
-function jump() {
-
-  if (!walletConnected) return;
-
-  if (gameOver) {
+function jump(){
+  if(!walletConnected || !gameRunning) return;
+  if(gameOver){
     resetGame();
     return;
   }
-
   velocity = jumpForce;
 }
-
-window.addEventListener("keydown", e => {
-  if (e.code === "Space") jump();
-});
+window.addEventListener("keydown", e=>{ if(e.code==="Space") jump();});
 window.addEventListener("touchstart", jump);
 
-// ===== PIPE SPAWN =====
-function createPipe() {
-  const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
-  pipes.push({
-    x: canvas.width,
-    top: top,
-    bottom: top + pipeGap,
-    passed: false
-  });
+// ===== PIPE =====
+function createPipe(){
+  const top = Math.random()*(canvas.height-pipeGap-100)+50;
+  pipes.push({x:canvas.width,top:top,bottom:top+pipeGap,passed:false});
 }
 
 // ===== GAME LOOP =====
-function gameLoop(timestamp) {
+function gameLoop(timestamp){
+  if(!lastTime) lastTime=timestamp;
+  let delta=(timestamp-lastTime)/1000;
+  lastTime=timestamp;
+  if(delta>0.033) delta=0.033;
 
-  if (!lastTime) lastTime = timestamp;
-  let delta = (timestamp - lastTime) / 1000;
-  lastTime = timestamp;
+  if(gameRunning){
+    ctx.fillStyle="#FFD700";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  if (delta > 0.033) delta = 0.033;
+    if(!gameOver){
+      velocity+=gravity*delta;
+      birdY+=velocity*delta;
 
-  ctx.fillStyle = "#FFD700";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  if (walletConnected && !gameOver) {
-
-    velocity += gravity * delta;
-    birdY += velocity * delta;
-
-    pipeTimer += delta;
-    if (pipeTimer > pipeInterval) {
-      createPipe();
-      pipeTimer = 0;
-    }
-
-    ctx.fillStyle = "#003366";
-
-    for (let i = pipes.length - 1; i >= 0; i--) {
-
-      let pipe = pipes[i];
-      pipe.x -= pipeSpeed * delta;
-
-      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-      ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height);
-
-      if (
-        100 < pipe.x + pipeWidth &&
-        100 + birdSize > pipe.x &&
-        (birdY < pipe.top || birdY + birdSize > pipe.bottom)
-      ) {
-        gameOver = true;
+      pipeTimer+=delta;
+      if(pipeTimer>pipeInterval){
+        createPipe();
+        pipeTimer=0;
       }
 
-      if (!pipe.passed && pipe.x < 100) {
-        pipe.passed = true;
-        score++;
-        document.getElementById("score").innerText = score;
+      ctx.fillStyle="#003366";
+      for(let i=pipes.length-1;i>=0;i--){
+        let pipe=pipes[i];
+        pipe.x-=pipeSpeed*delta;
+
+        ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
+        ctx.fillRect(pipe.x,pipe.bottom,pipeWidth,canvas.height);
+
+        if(
+          100<pipe.x+pipeWidth &&
+          100+birdSize>pipe.x &&
+          (birdY<pipe.top || birdY+birdSize>pipe.bottom)
+        ){ gameOver=true; }
+
+        if(!pipe.passed && pipe.x<100){
+          pipe.passed=true;
+          score++;
+          document.getElementById("score").innerText=score;
+        }
+
+        if(pipe.x<-pipeWidth){ pipes.splice(i,1);}
       }
 
-      if (pipe.x < -pipeWidth) {
-        pipes.splice(i, 1);
-      }
+      if(birdY>canvas.height-birdSize){ gameOver=true; }
     }
 
-    if (birdY > canvas.height - birdSize) {
-      gameOver = true;
+    ctx.drawImage(birdImg,100,birdY,birdSize,birdSize);
+
+    if(gameOver){
+      ctx.fillStyle="black";
+      ctx.font="30px Arial";
+      ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+
+      saveLeaderboard();
     }
-  }
-
-  // ===== DRAW BIRD (STATIC FULL IMAGE)
-  ctx.drawImage(
-    birdImg,
-    100,
-    birdY,
-    birdSize,
-    birdSize
-  );
-
-  // ===== UI MESSAGE
-  if (!walletConnected) {
-    ctx.fillStyle = "black";
-    ctx.font = "24px Arial";
-    ctx.fillText("Connect Wallet to Play", canvas.width/2 - 130, canvas.height/2);
-  }
-
-  if (gameOver) {
-    ctx.fillStyle = "black";
-    ctx.font = "30px Arial";
-    ctx.fillText("GAME OVER", canvas.width/2 - 90, canvas.height/2);
-    ctx.font = "18px Arial";
-    ctx.fillText("Tap / Space to Restart", canvas.width/2 - 100, canvas.height/2 + 30);
   }
 
   requestAnimationFrame(gameLoop);
 }
-
-birdImg.onload = () => requestAnimationFrame(gameLoop);
+birdImg.onload=()=>requestAnimationFrame(gameLoop);
 
 // ===== RESET =====
-function resetGame() {
+function resetGame(){
+  score=0;
+  document.getElementById("score").innerText=0;
+  pipes=[];
+  velocity=0;
+  birdY=200;
+  pipeTimer=0;
+  gameOver=false;
+}
 
-  if (score > highscore) {
-    highscore = score;
-    localStorage.setItem("highscore", highscore);
-    document.getElementById("highscore").innerText = highscore;
-  }
-
-  score = 0;
-  document.getElementById("score").innerText = 0;
-
-  pipes = [];
-  velocity = 0;
-  birdY = 200;
-  pipeTimer = 0;
-  gameOver = false;
+// ===== SAVE LEADERBOARD =====
+function saveLeaderboard(){
+  let data = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  data.push({wallet:connectedWallet,score:score});
+  localStorage.setItem("leaderboard",JSON.stringify(data));
 }
 
 // ===== WALLET =====
-let connectedWallet = null;
+async function connectWallet(){
+  if(!window.keplr){ alert("Keplr not detected"); return; }
+  await window.keplr.enable("columbus-5");
+  const offlineSigner=window.getOfflineSigner("columbus-5");
+  const accounts=await offlineSigner.getAccounts();
+  connectedWallet=accounts[0].address;
+  walletConnected=true;
 
-async function connectWallet() {
-
-  if (!window.keplr) {
-    alert("Keplr tidak terdeteksi");
-    return;
-  }
-
-  try {
-    await window.keplr.enable("columbus-5");
-
-    const offlineSigner = window.getOfflineSigner("columbus-5");
-    const accounts = await offlineSigner.getAccounts();
-
-    connectedWallet = accounts[0].address;
-    walletConnected = true;
-
-    document.getElementById("walletStatus").innerText =
-      "Wallet: " + connectedWallet.slice(0,10) + "...";
-
-    document.getElementById("connectBtn").style.display = "none";
-    document.getElementById("disconnectBtn").style.display = "inline-block";
-
-  } catch (err) {
-    alert("Gagal connect wallet");
-  }
+  document.getElementById("walletStatus").innerText=
+    "Wallet: "+connectedWallet.slice(0,10)+"...";
+  document.getElementById("connectBtn").style.display="none";
+  document.getElementById("disconnectBtn").style.display="inline-block";
+  document.getElementById("menuBox").style.display="block";
 }
 
-function disconnectWallet() {
-  connectedWallet = null;
-  walletConnected = false;
-
-  document.getElementById("walletStatus").innerText =
-    "Wallet: Not Connected";
-
-  document.getElementById("connectBtn").style.display = "inline-block";
-  document.getElementById("disconnectBtn").style.display = "none";
-
-  resetGame();
+function disconnectWallet(){
+  walletConnected=false;
+  connectedWallet=null;
+  document.getElementById("walletStatus").innerText="Wallet: Not Connected";
+  document.getElementById("connectBtn").style.display="inline-block";
+  document.getElementById("disconnectBtn").style.display="none";
+  document.getElementById("menuBox").style.display="none";
+  canvas.style.display="none";
 }
 </script>
 
