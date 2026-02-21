@@ -68,27 +68,16 @@ button {
   <div>Highscore: <span id="highscore">0</span></div>
 </div>
 
-<!-- MAIN MENU -->
 <div id="menuBox">
   <h2>Main Menu</h2>
   <button onclick="showConnectOptions()">Play Game</button><br>
-  <button onclick="showLeaderboard()">Leaderboard</button><br>
-  <button onclick="showStatistic()">Statistic</button><br>
-  <button onclick="showRedeem()">Redeem</button><br>
-  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
 </div>
 
-<!-- CONNECT CHOICE -->
 <div id="connectChoice" style="display:none;">
   <h3>Choose Wallet</h3>
   <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
-  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
   <button onclick="backToMenu()">Back</button>
 </div>
-
-<div id="leaderboardBox" class="panel"></div>
-<div id="statBox" class="panel"></div>
-<div id="redeemBox" class="panel"></div>
 
 <canvas id="gameCanvas"></canvas>
 
@@ -127,6 +116,7 @@ document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
 let gameOver = false;
+let gameSaved = false;
 
 const birdSize = 60;
 const pipeWidth = 70;
@@ -165,142 +155,7 @@ async function connectDesktop(){
   }
 }
 
-// ===== MOBILE CONNECT (DEEPLINK) =====
-function connectMobile(){
-
-  const currentUrl = window.location.href;
-
-  // Deep link for Keplr mobile
-  const deepLink =
-    "keplrwallet://wc?uri=" + encodeURIComponent(currentUrl);
-
-  window.location.href = deepLink;
-
-  alert("If Keplr Mobile does not open, please open this site inside Keplr browser.");
-}
-
 // ===== START GAME =====
 function startGame(){
   document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
-  canvas.style.display="block";
-
-  document.getElementById("walletStatus").innerText =
-    "Wallet: " + connectedWallet.slice(0,10) + "...";
-
-  gameRunning = true;
-}
-
-// ===== GAME INPUT =====
-function jump(){
-  if(!gameRunning) return;
-
-  if(gameOver){
-    resetGame();
-    return;
-  }
-
-  velocity = jumpForce;
-}
-window.addEventListener("keydown", e=>{ if(e.code==="Space") jump();});
-window.addEventListener("touchstart", jump);
-
-// ===== PIPE =====
-function createPipe(){
-  const top = Math.random()*(canvas.height-pipeGap-100)+50;
-  pipes.push({x:canvas.width,top:top,bottom:top+pipeGap,passed:false});
-}
-
-// ===== GAME LOOP =====
-function gameLoop(timestamp){
-  if(!lastTime) lastTime=timestamp;
-  let delta=(timestamp-lastTime)/1000;
-  lastTime=timestamp;
-  if(delta>0.033) delta=0.033;
-
-  if(gameRunning){
-    ctx.fillStyle="#FFD700";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    if(!gameOver){
-      velocity+=gravity*delta;
-      birdY+=velocity*delta;
-
-      pipeTimer+=delta;
-      if(pipeTimer>pipeInterval){
-        createPipe();
-        pipeTimer=0;
-      }
-
-      ctx.fillStyle="#003366";
-      for(let i=pipes.length-1;i>=0;i--){
-        let pipe=pipes[i];
-        pipe.x-=pipeSpeed*delta;
-
-        ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
-        ctx.fillRect(pipe.x,pipe.bottom,pipeWidth,canvas.height);
-
-        if(
-          100<pipe.x+pipeWidth &&
-          100+birdSize>pipe.x &&
-          (birdY<pipe.top || birdY+birdSize>pipe.bottom)
-        ){ gameOver=true; }
-
-        if(!pipe.passed && pipe.x<100){
-          pipe.passed=true;
-          score++;
-          document.getElementById("score").innerText=score;
-        }
-
-        if(pipe.x<-pipeWidth){ pipes.splice(i,1);}
-      }
-
-      if(birdY>canvas.height-birdSize){ gameOver=true; }
-    }
-
-    ctx.drawImage(birdImg,100,birdY,birdSize,birdSize);
-
-    if(gameOver){
-      ctx.fillStyle="black";
-      ctx.font="30px Arial";
-      ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
-      saveLeaderboard();
-    }
-  }
-
-  requestAnimationFrame(gameLoop);
-}
-birdImg.onload=()=>requestAnimationFrame(gameLoop);
-
-// ===== RESET =====
-function resetGame(){
-  score=0;
-  document.getElementById("score").innerText=0;
-  pipes=[];
-  velocity=0;
-  birdY=200;
-  pipeTimer=0;
-  gameOver=false;
-}
-
-// ===== SAVE LEADERBOARD =====
-function saveLeaderboard(){
-  let data = JSON.parse(localStorage.getItem("leaderboard")) || [];
-  data.push({wallet:connectedWallet,score:score});
-  localStorage.setItem("leaderboard",JSON.stringify(data));
-}
-
-// ===== DISCONNECT =====
-function disconnectWallet(){
-  walletConnected=false;
-  connectedWallet=null;
-  gameRunning=false;
-
-  document.getElementById("ui").style.display="none";
-  canvas.style.display="none";
-  document.getElementById("menuBox").style.display="block";
-}
-</script>
-
-</body>
-</html>
