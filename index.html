@@ -17,6 +17,7 @@ body {
   display: block;
   margin: auto;
   background: #FFD700;
+  image-rendering: pixelated;
 }
 
 #ui {
@@ -36,6 +37,7 @@ button {
   background: #003366;
   color: white;
   border-radius: 5px;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -51,9 +53,6 @@ button {
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- Hidden GIF element -->
-<img id="birdGif" src="terra.gif" style="display:none;" />
-
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -65,8 +64,9 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== GET GIF FROM DOM (BROWSER HANDLES ANIMATION)
-const birdGif = document.getElementById("birdGif");
+// ===== LOAD IMAGE (STATIC) =====
+const birdImg = new Image();
+birdImg.src = "terra.png";
 
 // ===== GAME STATE =====
 let walletConnected = false;
@@ -178,17 +178,16 @@ function gameLoop(timestamp) {
     }
   }
 
-  // ===== DRAW GIF FRAME (WORKING FIX)
-  if (birdGif.complete) {
-    ctx.drawImage(
-      birdGif,
-      100,
-      birdY,
-      birdSize,
-      birdSize
-    );
-  }
+  // ===== DRAW BIRD (STATIC FULL IMAGE)
+  ctx.drawImage(
+    birdImg,
+    100,
+    birdY,
+    birdSize,
+    birdSize
+  );
 
+  // ===== UI MESSAGE
   if (!walletConnected) {
     ctx.fillStyle = "black";
     ctx.font = "24px Arial";
@@ -206,7 +205,7 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
-birdGif.onload = () => requestAnimationFrame(gameLoop);
+birdImg.onload = () => requestAnimationFrame(gameLoop);
 
 // ===== RESET =====
 function resetGame() {
@@ -239,6 +238,7 @@ async function connectWallet() {
 
   try {
     await window.keplr.enable("columbus-5");
+
     const offlineSigner = window.getOfflineSigner("columbus-5");
     const accounts = await offlineSigner.getAccounts();
 
