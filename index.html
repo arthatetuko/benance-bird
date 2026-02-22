@@ -52,10 +52,11 @@ button {
   text-align: center;
 }
 
-.panel {
+#leaderboardBox {
   display:none;
   text-align:center;
   margin-top:50px;
+  color:white;
 }
 </style>
 </head>
@@ -74,7 +75,7 @@ button {
   <button onclick="showLeaderboard()">Leaderboard</button>
 </div>
 
-<div id="leaderboardBox" class="panel"></div>
+<div id="leaderboardBox"></div>
 
 <div id="connectChoice" style="display:none;">
   <h3>Choose Wallet</h3>
@@ -90,7 +91,7 @@ button {
 
 // ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3lxam5vdmlqZnFxeGl1dHZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzQzNjMsImV4cCI6MjA4NzMxMDM2M30.kyVO2g-1XaY8ePMG4B6eYowH3jFGtUfLv-ar7Duhk9U";
+const supabaseKey = "YOUR_ANON_KEY";
 
 const { createClient } = supabase;
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
@@ -106,8 +107,49 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== GAME STATE =====
-let walletConnected=false;
+// ===== LOAD 2 FRAME IMAGES =====
+const birdFrame1 = new Image();
+birdFrame1.src = "terra1.png";
+
+const birdFrame2 = new Image();
+birdFrame2.src = "terra2.png";
+
+let currentFrame=0;
+let frameTimer=0;
+const frameInterval=0.12;
+
+// ===== AUDIO =====
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playJumpSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type="square";
+  osc.frequency.setValueAtTime(700,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(300,audioCtx.currentTime+0.1);
+  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.1);
+}
+
+function playCrashSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type="square";
+  osc.frequency.setValueAtTime(120,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40,audioCtx.currentTime+0.3);
+  gain.gain.setValueAtTime(0.2,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.3);
+}
+
+// ===== STATE =====
 let connectedWallet=null;
 let gameRunning=false;
 
@@ -125,6 +167,7 @@ let highscore=0;
 
 let lastTime=0;
 let gameOver=false;
+let flashAlpha=0;
 
 const birdSize=70;
 const pipeWidth=70;
@@ -135,16 +178,6 @@ function formatWallet(addr){
   return addr.slice(0,6)+"..."+addr.slice(-4);
 }
 
-// ===== MENU =====
-function showConnectOptions(){
-  document.getElementById("menuBox").style.display="none";
-  document.getElementById("connectChoice").style.display="block";
-}
-function backToMenu(){
-  document.getElementById("connectChoice").style.display="none";
-  document.getElementById("menuBox").style.display="block";
-}
-
 // ===== CONNECT =====
 async function connectDesktop(){
   if(!window.keplr){
@@ -152,52 +185,42 @@ async function connectDesktop(){
     return;
   }
 
-  try{
-    await window.keplr.enable("columbus-5");
-    const signer = window.getOfflineSigner("columbus-5");
-    const accounts = await signer.getAccounts();
+  await window.keplr.enable("columbus-5");
+  const signer = window.getOfflineSigner("columbus-5");
+  const accounts = await signer.getAccounts();
 
-    connectedWallet=accounts[0].address;
-    walletConnected=true;
+  connectedWallet=accounts[0].address;
 
-    await loadHighscoreFromDB();
-    startGame();
-
-  }catch(err){
-    console.log(err);
-    alert("Wallet connection failed");
-  }
+  await loadHighscoreFromDB();
+  startGame();
 }
 
 // ===== LOAD HIGHSCORE =====
 async function loadHighscoreFromDB(){
-  try{
-    const { data } = await supabaseClient
-      .from("leaderboard")
-      .select("highscore")
-      .eq("wallet",connectedWallet)
-      .single();
+  const { data } = await supabaseClient
+    .from("leaderboard")
+    .select("highscore")
+    .eq("wallet",connectedWallet)
+    .single();
 
-    highscore = data ? data.highscore : 0;
-    document.getElementById("highscore").innerText=highscore;
-
-  }catch(err){
-    console.log("Load error:",err);
-  }
+  highscore = data ? data.highscore : 0;
+  document.getElementById("highscore").innerText=highscore;
 }
 
-// ===== SAVE SCORE =====
+// ===== SAVE SCORE (ONLY IF HIGHER) =====
 async function saveScoreToDB(){
-  try{
-    await supabaseClient
-      .from("leaderboard")
-      .upsert({
-        wallet: connectedWallet,
-        highscore: score
-      }, { onConflict: "wallet" });
-  }catch(err){
-    console.log("Save error:",err);
-  }
+
+  if(score <= highscore) return;
+
+  highscore = score;
+  document.getElementById("highscore").innerText=highscore;
+
+  await supabaseClient
+    .from("leaderboard")
+    .upsert({
+      wallet: connectedWallet,
+      highscore: highscore
+    }, { onConflict: "wallet" });
 }
 
 // ===== LEADERBOARD =====
@@ -209,13 +232,11 @@ async function showLeaderboard(){
     .order("highscore",{ascending:false})
     .limit(10);
 
-  let html="<h2>Top 10 Leaderboard</h2>";
+  let html="<h2 style='color:white;'>Top 10 Leaderboard</h2>";
 
-  if(data){
-    data.forEach((row,i)=>{
-      html+=`<p>${i+1}. ${formatWallet(row.wallet)} - ${row.highscore}</p>`;
-    });
-  }
+  data.forEach((row,i)=>{
+    html+=`<p style="color:white;">${i+1}. ${formatWallet(row.wallet)} - ${row.highscore}</p>`;
+  });
 
   html+="<br><button onclick='closeLeaderboard()'>Back</button>";
 
@@ -229,15 +250,12 @@ function closeLeaderboard(){
   document.getElementById("menuBox").style.display="block";
 }
 
-// ===== START =====
+// ===== START GAME =====
 function startGame(){
   document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
   canvas.style.display="block";
-
-  document.getElementById("walletStatus").innerText=
-    "Wallet: "+formatWallet(connectedWallet);
-
+  document.getElementById("walletStatus").innerText="Wallet: "+formatWallet(connectedWallet);
   gameRunning=true;
 }
 
@@ -251,6 +269,7 @@ function jump(){
   }
 
   velocity=jumpForce;
+  playJumpSound();
 }
 window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 window.addEventListener("touchstart",jump);
@@ -298,6 +317,8 @@ function gameLoop(timestamp){
           (birdY<pipe.top || birdY+birdSize>pipe.bottom)
         ){
           gameOver=true;
+          flashAlpha=0.6;
+          playCrashSound();
           saveScoreToDB();
         }
 
@@ -311,10 +332,25 @@ function gameLoop(timestamp){
       }
     }
 
-    ctx.fillStyle="black";
-    ctx.fillRect(100,birdY,birdSize,birdSize);
+    // FRAME ANIMATION
+    frameTimer+=delta;
+    if(frameTimer>frameInterval){
+      currentFrame=currentFrame===0?1:0;
+      frameTimer=0;
+    }
+
+    const birdImage=currentFrame===0?birdFrame1:birdFrame2;
+    ctx.drawImage(birdImage,100,birdY,birdSize,birdSize);
+
+    // FLASH
+    if(flashAlpha>0){
+      ctx.fillStyle="rgba(255,0,0,"+flashAlpha+")";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      flashAlpha-=delta;
+    }
 
     if(gameOver){
+      ctx.fillStyle="black";
       ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
     }
   }
@@ -332,13 +368,12 @@ function resetGame(){
   birdY=200;
   pipeTimer=0;
   gameOver=false;
+  flashAlpha=0;
 }
 
 function disconnectWallet(){
-  walletConnected=false;
   connectedWallet=null;
   gameRunning=false;
-
   document.getElementById("ui").style.display="none";
   canvas.style.display="none";
   document.getElementById("menuBox").style.display="block";
@@ -347,4 +382,3 @@ function disconnectWallet(){
 
 </body>
 </html>
-
