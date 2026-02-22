@@ -193,23 +193,60 @@ function backToMenu(){
 
 // ===== CONNECT =====
 async function connectDesktop(){
-  if(!window.keplr){
+
+  if (!window.keplr) {
     alert("Keplr Extension not detected");
     return;
   }
 
-  try{
+  try {
+
+    // tunggu Keplr ready
+    await window.keplr.experimentalSuggestChain({
+      chainId: "columbus-5",
+      chainName: "Terra Classic",
+      rpc: "https://terra-classic-rpc.publicnode.com",
+      rest: "https://terra-classic-lcd.publicnode.com",
+      bip44: { coinType: 330 },
+      bech32Config: {
+        bech32PrefixAccAddr: "terra",
+        bech32PrefixAccPub: "terrapub",
+        bech32PrefixValAddr: "terravaloper",
+        bech32PrefixValPub: "terravaloperpub",
+        bech32PrefixConsAddr: "terravalcons",
+        bech32PrefixConsPub: "terravalconspub",
+      },
+      currencies: [{
+        coinDenom: "LUNC",
+        coinMinimalDenom: "uluna",
+        coinDecimals: 6,
+      }],
+      feeCurrencies: [{
+        coinDenom: "LUNC",
+        coinMinimalDenom: "uluna",
+        coinDecimals: 6,
+      }],
+      stakeCurrency: {
+        coinDenom: "LUNC",
+        coinMinimalDenom: "uluna",
+        coinDecimals: 6,
+      },
+    });
+
     await window.keplr.enable("columbus-5");
+
     const signer = window.getOfflineSigner("columbus-5");
     const accounts = await signer.getAccounts();
 
-    connectedWallet=accounts[0].address;
-    walletConnected=true;
+    connectedWallet = accounts[0].address;
+    walletConnected = true;
 
     await loadHighscoreFromDB();
     startGame();
-  }catch{
-    alert("Connection failed");
+
+  } catch (err) {
+    console.log("Connect error:", err);
+    alert("Wallet connection failed. Please refresh and try again.");
   }
 }
 
@@ -409,4 +446,5 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
