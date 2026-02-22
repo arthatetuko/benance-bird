@@ -51,12 +51,6 @@ button {
   border-radius: 10px;
   text-align: center;
 }
-
-.panel {
-  display: none;
-  text-align: center;
-  margin-top: 50px;
-}
 </style>
 </head>
 <body>
@@ -70,17 +64,12 @@ button {
 
 <div id="menuBox">
   <h2>Main Menu</h2>
-  <button onclick="showConnectOptions()">Play Game</button><br>
-  <button onclick="showLeaderboard()">Leaderboard</button><br>
-  <button onclick="showStatistic()">Statistic</button><br>
-  <button onclick="showRedeem()">Redeem</button><br>
-  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
+  <button onclick="showConnectOptions()">Play Game</button>
 </div>
 
 <div id="connectChoice" style="display:none;">
   <h3>Choose Wallet</h3>
-  <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
-  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
+  <button onclick="connectDesktop()">🖥 Connect Desktop</button>
   <button onclick="backToMenu()">Back</button>
 </div>
 
@@ -90,14 +79,14 @@ button {
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
+function resizeCanvas(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD 2 FRAME IMAGES =====
+// ===== LOAD FRAMES =====
 const birdFrame1 = new Image();
 birdFrame1.src = "terra1.png";
 
@@ -106,7 +95,28 @@ birdFrame2.src = "terra2.png";
 
 let currentFrame = 0;
 let frameTimer = 0;
-const frameInterval = 0.12; // 120ms
+const frameInterval = 0.12;
+
+// ===== SOUND (8 BIT) =====
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playJumpSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
 
 // ===== STATE =====
 let walletConnected = false;
@@ -129,14 +139,16 @@ document.getElementById("highscore").innerText = highscore;
 let lastTime = 0;
 let gameOver = false;
 
+let flashAlpha = 0;
+
 const birdSize = 70;
 const pipeWidth = 70;
 const pipeGap = 200;
 const pipeSpeed = 200;
 
-// ===== FORMAT WALLET =====
-function formatWallet(address){
-  return address.slice(0,6) + "..." + address.slice(-4);
+// ===== WALLET FORMAT =====
+function formatWallet(addr){
+  return addr.slice(0,6)+"..."+addr.slice(-4);
 }
 
 // ===== MENU =====
@@ -149,13 +161,11 @@ function backToMenu(){
   document.getElementById("menuBox").style.display="block";
 }
 
-// ===== DESKTOP CONNECT =====
 async function connectDesktop(){
   if(!window.keplr){
-    alert("Keplr Extension not detected");
+    alert("Keplr not detected");
     return;
   }
-
   try{
     await window.keplr.enable("columbus-5");
     const signer = window.getOfflineSigner("columbus-5");
@@ -169,18 +179,13 @@ async function connectDesktop(){
   }
 }
 
-function connectMobile(){
-  alert("Open inside Keplr Mobile Browser.");
-}
-
-// ===== START GAME =====
 function startGame(){
   document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
   canvas.style.display="block";
 
   document.getElementById("walletStatus").innerText =
-    "Wallet: " + formatWallet(connectedWallet);
+    "Wallet: "+formatWallet(connectedWallet);
 
   gameRunning = true;
 }
@@ -195,6 +200,7 @@ function jump(){
   }
 
   velocity = jumpForce;
+  playJumpSound();
 }
 window.addEventListener("keydown", e=>{ if(e.code==="Space") jump();});
 window.addEventListener("touchstart", jump);
@@ -219,7 +225,6 @@ function gameLoop(timestamp){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     if(!gameOver){
-
       velocity+=gravity*delta;
       birdY+=velocity*delta;
 
@@ -241,7 +246,10 @@ function gameLoop(timestamp){
           100<pipe.x+pipeWidth &&
           100+birdSize>pipe.x &&
           (birdY<pipe.top || birdY+birdSize>pipe.bottom)
-        ){ gameOver=true; }
+        ){
+          gameOver=true;
+          flashAlpha=0.5;
+        }
 
         if(!pipe.passed && pipe.x<100){
           pipe.passed=true;
@@ -258,7 +266,10 @@ function gameLoop(timestamp){
         if(pipe.x<-pipeWidth){ pipes.splice(i,1);}
       }
 
-      if(birdY>canvas.height-birdSize){ gameOver=true; }
+      if(birdY>canvas.height-birdSize){
+        gameOver=true;
+        flashAlpha=0.5;
+      }
     }
 
     // ===== FRAME ANIMATION =====
@@ -270,13 +281,35 @@ function gameLoop(timestamp){
 
     const birdImage = currentFrame===0?birdFrame1:birdFrame2;
 
+    // ===== ROTATION =====
+    let rotation = velocity * 0.002;
+    if(rotation>0.5) rotation=0.5;
+    if(rotation<-0.5) rotation=-0.5;
+
+    ctx.save();
+    ctx.translate(100+birdSize/2, birdY+birdSize/2);
+    ctx.rotate(rotation);
+
+    // ===== SHADOW =====
+    ctx.fillStyle="rgba(0,0,0,0.3)";
+    ctx.fillRect(-birdSize/2+5, birdSize/2-5, birdSize, 10);
+
     ctx.drawImage(
       birdImage,
-      100,
-      birdY,
+      -birdSize/2,
+      -birdSize/2,
       birdSize,
       birdSize
     );
+
+    ctx.restore();
+
+    // ===== HIT FLASH =====
+    if(flashAlpha>0){
+      ctx.fillStyle="rgba(255,0,0,"+flashAlpha+")";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      flashAlpha-=delta;
+    }
 
     if(gameOver){
       ctx.fillStyle="black";
@@ -291,9 +324,7 @@ function gameLoop(timestamp){
 Promise.all([
   new Promise(res=>birdFrame1.onload=res),
   new Promise(res=>birdFrame2.onload=res)
-]).then(()=>{
-  requestAnimationFrame(gameLoop);
-});
+]).then(()=>requestAnimationFrame(gameLoop));
 
 // ===== RESET =====
 function resetGame(){
