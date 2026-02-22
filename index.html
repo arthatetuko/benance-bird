@@ -252,11 +252,20 @@ function closeLeaderboard(){
 
 // ===== START GAME =====
 function startGame(){
-  document.getElementById("connectChoice").style.display="none";
-  document.getElementById("ui").style.display="block";
-  canvas.style.display="block";
-  document.getElementById("walletStatus").innerText="Wallet: "+formatWallet(connectedWallet);
-  gameRunning=true;
+
+  // HIDE MAIN MENU
+  document.getElementById("menuBox").style.display = "none";
+  document.getElementById("leaderboardBox").style.display = "none";
+  document.getElementById("connectChoice").style.display = "none";
+
+  // SHOW GAME UI
+  document.getElementById("ui").style.display = "block";
+  canvas.style.display = "block";
+
+  document.getElementById("walletStatus").innerText =
+    "Wallet: " + formatWallet(connectedWallet);
+
+  gameRunning = true;
 }
 
 // ===== INPUT =====
@@ -382,6 +391,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
