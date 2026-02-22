@@ -88,15 +88,12 @@ button {
 
 <script>
 
-// ===== SUPABASE CONFIG =====
+// ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3lxam5vdmlqZnFxeGl1dHZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzQzNjMsImV4cCI6MjA4NzMxMDM2M30.kyVO2g-1XaY8ePMG4B6eYowH3jFGtUfLv-ar7Duhk9U";
+const supabaseKey = "PASTE_ANON_KEY_KAMU_DISINI";
 
 const { createClient } = supabase;
-const supabaseClient = createClient(
-  supabaseUrl,
-  supabaseKey
-);
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 // ===== CANVAS =====
 const canvas = document.getElementById("gameCanvas");
@@ -109,49 +106,7 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD IMAGES =====
-const birdFrame1 = new Image();
-birdFrame1.src = "terra1.png";
-
-const birdFrame2 = new Image();
-birdFrame2.src = "terra2.png";
-
-let currentFrame=0;
-let frameTimer=0;
-const frameInterval=0.12;
-
-// ===== AUDIO =====
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playJumpSound(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type="square";
-  osc.frequency.setValueAtTime(700,audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(300,audioCtx.currentTime+0.1);
-  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime+0.1);
-}
-
-function playCrashSound(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type="square";
-  osc.frequency.setValueAtTime(120,audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(40,audioCtx.currentTime+0.3);
-  gain.gain.setValueAtTime(0.2,audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime+0.3);
-}
-
-// ===== STATE =====
+// ===== GAME STATE =====
 let walletConnected=false;
 let connectedWallet=null;
 let gameRunning=false;
@@ -170,7 +125,6 @@ let highscore=0;
 
 let lastTime=0;
 let gameOver=false;
-let flashAlpha=0;
 
 const birdSize=70;
 const pipeWidth=70;
@@ -193,89 +147,63 @@ function backToMenu(){
 
 // ===== CONNECT =====
 async function connectDesktop(){
-
-  if (!window.keplr) {
-    alert("Keplr Extension not detected");
+  if(!window.keplr){
+    alert("Keplr not detected");
     return;
   }
 
-  try {
-
-    // tunggu Keplr ready
-    await window.keplr.experimentalSuggestChain({
-      chainId: "columbus-5",
-      chainName: "Terra Classic",
-      rpc: "https://terra-classic-rpc.publicnode.com",
-      rest: "https://terra-classic-lcd.publicnode.com",
-      bip44: { coinType: 330 },
-      bech32Config: {
-        bech32PrefixAccAddr: "terra",
-        bech32PrefixAccPub: "terrapub",
-        bech32PrefixValAddr: "terravaloper",
-        bech32PrefixValPub: "terravaloperpub",
-        bech32PrefixConsAddr: "terravalcons",
-        bech32PrefixConsPub: "terravalconspub",
-      },
-      currencies: [{
-        coinDenom: "LUNC",
-        coinMinimalDenom: "uluna",
-        coinDecimals: 6,
-      }],
-      feeCurrencies: [{
-        coinDenom: "LUNC",
-        coinMinimalDenom: "uluna",
-        coinDecimals: 6,
-      }],
-      stakeCurrency: {
-        coinDenom: "LUNC",
-        coinMinimalDenom: "uluna",
-        coinDecimals: 6,
-      },
-    });
-
+  try{
     await window.keplr.enable("columbus-5");
-
     const signer = window.getOfflineSigner("columbus-5");
     const accounts = await signer.getAccounts();
 
-    connectedWallet = accounts[0].address;
-    walletConnected = true;
+    connectedWallet=accounts[0].address;
+    walletConnected=true;
 
     await loadHighscoreFromDB();
     startGame();
 
-  } catch (err) {
-    console.log("Connect error:", err);
-    alert("Wallet connection failed. Please refresh and try again.");
+  }catch(err){
+    console.log(err);
+    alert("Wallet connection failed");
   }
 }
 
-// ===== LOAD USER SCORE =====
+// ===== LOAD HIGHSCORE =====
 async function loadHighscoreFromDB(){
-  const { data } = await supabase
-    .from("leaderboard")
-    .select("highscore")
-    .eq("wallet",connectedWallet)
-    .single();
+  try{
+    const { data } = await supabaseClient
+      .from("leaderboard")
+      .select("highscore")
+      .eq("wallet",connectedWallet)
+      .single();
 
-  highscore = data ? data.highscore : 0;
-  document.getElementById("highscore").innerText=highscore;
+    highscore = data ? data.highscore : 0;
+    document.getElementById("highscore").innerText=highscore;
+
+  }catch(err){
+    console.log("Load error:",err);
+  }
 }
 
 // ===== SAVE SCORE =====
 async function saveScoreToDB(){
-  await supabase
-    .from("leaderboard")
-    .upsert({
-      wallet: connectedWallet,
-      highscore: score
-    }, { onConflict: "wallet" });
+  try{
+    await supabaseClient
+      .from("leaderboard")
+      .upsert({
+        wallet: connectedWallet,
+        highscore: score
+      }, { onConflict: "wallet" });
+  }catch(err){
+    console.log("Save error:",err);
+  }
 }
 
 // ===== LEADERBOARD =====
 async function showLeaderboard(){
 
-  const { data } = await supabase
+  const { data } = await supabaseClient
     .from("leaderboard")
     .select("*")
     .order("highscore",{ascending:false})
@@ -283,9 +211,11 @@ async function showLeaderboard(){
 
   let html="<h2>Top 10 Leaderboard</h2>";
 
-  data.forEach((row,i)=>{
-    html+=`<p>${i+1}. ${formatWallet(row.wallet)} - ${row.highscore}</p>`;
-  });
+  if(data){
+    data.forEach((row,i)=>{
+      html+=`<p>${i+1}. ${formatWallet(row.wallet)} - ${row.highscore}</p>`;
+    });
+  }
 
   html+="<br><button onclick='closeLeaderboard()'>Back</button>";
 
@@ -299,7 +229,7 @@ function closeLeaderboard(){
   document.getElementById("menuBox").style.display="block";
 }
 
-// ===== START GAME =====
+// ===== START =====
 function startGame(){
   document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
@@ -321,7 +251,6 @@ function jump(){
   }
 
   velocity=jumpForce;
-  playJumpSound();
 }
 window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 window.addEventListener("touchstart",jump);
@@ -332,13 +261,12 @@ function createPipe(){
   pipes.push({x:canvas.width,top:top,bottom:top+pipeGap,passed:false});
 }
 
-// ===== GAME LOOP =====
+// ===== LOOP =====
 function gameLoop(timestamp){
 
   if(!lastTime)lastTime=timestamp;
   let delta=(timestamp-lastTime)/1000;
   lastTime=timestamp;
-  if(delta>0.033)delta=0.033;
 
   if(gameRunning){
 
@@ -370,8 +298,6 @@ function gameLoop(timestamp){
           (birdY<pipe.top || birdY+birdSize>pipe.bottom)
         ){
           gameOver=true;
-          flashAlpha=0.6;
-          playCrashSound();
           saveScoreToDB();
         }
 
@@ -383,33 +309,12 @@ function gameLoop(timestamp){
 
         if(pipe.x<-pipeWidth){pipes.splice(i,1);}
       }
-
-      if(birdY>canvas.height-birdSize){
-        gameOver=true;
-        flashAlpha=0.6;
-        playCrashSound();
-        saveScoreToDB();
-      }
     }
 
-    frameTimer+=delta;
-    if(frameTimer>frameInterval){
-      currentFrame=currentFrame===0?1:0;
-      frameTimer=0;
-    }
-
-    const birdImage=currentFrame===0?birdFrame1:birdFrame2;
-    ctx.drawImage(birdImage,100,birdY,birdSize,birdSize);
-
-    if(flashAlpha>0){
-      ctx.fillStyle="rgba(255,0,0,"+flashAlpha+")";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      flashAlpha-=delta;
-    }
+    ctx.fillStyle="black";
+    ctx.fillRect(100,birdY,birdSize,birdSize);
 
     if(gameOver){
-      ctx.fillStyle="black";
-      ctx.font="30px Arial";
       ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
     }
   }
@@ -417,10 +322,7 @@ function gameLoop(timestamp){
   requestAnimationFrame(gameLoop);
 }
 
-Promise.all([
-  new Promise(res=>birdFrame1.onload=res),
-  new Promise(res=>birdFrame2.onload=res)
-]).then(()=>requestAnimationFrame(gameLoop));
+requestAnimationFrame(gameLoop);
 
 function resetGame(){
   score=0;
@@ -430,7 +332,6 @@ function resetGame(){
   birdY=200;
   pipeTimer=0;
   gameOver=false;
-  flashAlpha=0;
 }
 
 function disconnectWallet(){
@@ -446,5 +347,3 @@ function disconnectWallet(){
 
 </body>
 </html>
-
-
