@@ -119,9 +119,6 @@ resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
 // ===== LOAD 2 FRAME IMAGES =====
-const pipeImg = new Image();
-pipeImg.src = "blue_pipe.png";
-  
 const birdFrame1 = new Image();
 birdFrame1.src = "terra1.png";
 
@@ -335,27 +332,13 @@ function gameLoop(timestamp){
         pipeTimer=0;
       }
 
-      // PIPE ATAS (dibalik)
-ctx.save();
-ctx.translate(pipe.x + pipeWidth/2, pipe.top);
-ctx.scale(1, -1);
-ctx.drawImage(
-  pipeImg,
-  -pipeWidth/2,
-  0,
-  pipeWidth,
-  pipe.top
-);
-ctx.restore();
+      ctx.fillStyle="#003366";
+      for(let i=pipes.length-1;i>=0;i--){
+        let pipe=pipes[i];
+        pipe.x-=pipeSpeed*delta;
 
-// PIPE BAWAH
-ctx.drawImage(
-  pipeImg,
-  pipe.x,
-  pipe.bottom,
-  pipeWidth,
-  canvas.height - pipe.bottom
-);
+        ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
+        ctx.fillRect(pipe.x,pipe.bottom,pipeWidth,canvas.height);
 
         if(
           100<pipe.x+pipeWidth &&
@@ -438,8 +421,6 @@ function disconnectWallet(){
 
 </body>
 </html>
-
-
 
 
 
