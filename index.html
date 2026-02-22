@@ -201,6 +201,9 @@ function playScoreSound(){
 }
 
 // ===== STATE =====
+const BENANCE_CONTRACT = "terra1ctvrh09s3q2tgxm88vt6zexle8wcf22qwhxe5qa2wchc9e2ynw3qhvksyl";
+const REQUIRED_BALANCE = 1000000000 * 1_000_000; // 1B BENANCE (dec 6)
+  
 let connectedWallet=null;
 let gameRunning=false;
 
@@ -233,6 +236,58 @@ function formatWallet(addr){
   return addr.slice(0,6)+"..."+addr.slice(-4);
 }
 
+async function checkBenanceBalance(wallet){
+
+  try {
+
+    // Buat query JSON
+    const queryMsg = {
+      balance: {
+        address: wallet
+      }
+    };
+
+    // Encode ke base64
+    const base64Query = btoa(JSON.stringify(queryMsg));
+
+    const response = await fetch(
+      "https://terra-classic-lcd.publicnode.com/cosmwasm/wasm/v1/contract/"
+      + BENANCE_CONTRACT
+      + "/smart/"
+      + base64Query
+    );
+
+    const result = await response.json();
+
+    if(!result.data || !result.data.balance){
+      return 0;
+    }
+
+    const balance = parseInt(result.data.balance);
+    return balance;
+
+  } catch (error){
+    console.log("Balance check error:", error);
+    return 0;
+  }
+}
+
+function showInsufficientBalance(){
+
+  document.getElementById("menuBox").innerHTML = `
+    <h2>Balance Not Enough</h2>
+    <p>You need 1,000,000,000 BENANCE to play.</p>
+
+    <button onclick="window.open(
+      'https://garuda-defi.org/market/terra174euun47r0xhwkslza67avnm5r4gtxnckfeeuud39c0ahtu5hryq57vel3',
+      '_blank'
+    )">Buy BENANCE</button>
+
+    <br>
+    <button onclick="location.reload()">Back</button>
+  `;
+}  
+  
 // ===== CONNECT =====
 async function connectDesktop(){
   if(!window.keplr){
@@ -247,7 +302,15 @@ async function connectDesktop(){
   connectedWallet=accounts[0].address;
 
   await loadHighscoreFromDB();
+
+// ===== CHECK BENANCE BALANCE =====
+const balance = await checkBenanceBalance(connectedWallet);
+
+if(balance >= REQUIRED_BALANCE){
   startGame();
+} else {
+  showInsufficientBalance();
+}
 }
 
 // ===== LOAD HIGHSCORE =====
@@ -507,6 +570,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
