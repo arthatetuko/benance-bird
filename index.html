@@ -168,6 +168,24 @@ function playCrashSound(){
   osc.stop(audioCtx.currentTime+0.3);
 }
 
+function playScoreSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
 // ===== STATE =====
 let connectedWallet=null;
 let gameRunning=false;
@@ -392,11 +410,12 @@ function gameLoop(timestamp){
         }
 
         if(!pipe.passed && pipe.x<100){
-          pipe.passed=true;
-          score++;
-          document.getElementById("score").innerText=score;
-        }
+  pipe.passed=true;
+  score++;
+  document.getElementById("score").innerText=score;
 
+  playScoreSound(); // ← TAMBAHKAN INI
+}
         if(pipe.x<-pipeWidth){pipes.splice(i,1);}
       }
     }
@@ -474,6 +493,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
