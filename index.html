@@ -129,6 +129,10 @@ birdFrame2.src = "terra2.png";
 const pipeImg = new Image();
 pipeImg.src = "blue_pipe.png";
 
+// ===== LOAD BACKGROUND =====
+const bgImg = new Image();
+bgImg.src = "background.png";
+
 let currentFrame=0;
 let frameTimer=0;
 const frameInterval=0.12;
@@ -320,8 +324,13 @@ function gameLoop(timestamp){
 
   if(gameRunning){
 
-    ctx.fillStyle="#FFD700";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(
+  bgImg,
+  0,
+  0,
+  canvas.width,
+  canvas.height
+);
 
     if(!gameOver){
 
@@ -465,6 +474,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
