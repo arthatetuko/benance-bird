@@ -168,6 +168,10 @@ function playCrashSound(){
 let connectedWallet=null;
 let gameRunning=false;
 
+let isFlapping = false;
+let flapTimer = 0;
+const flapDuration = 0.25; // durasi animasi flap (detik)
+
 let birdY=200;
 let velocity=0;
 let gravity=1200;
@@ -294,6 +298,9 @@ function jump(){
 
   velocity=jumpForce;
   playJumpSound();
+
+  isFlapping = true;
+  flapTimer = 0;
 }
 window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 window.addEventListener("touchstart",jump);
@@ -386,11 +393,24 @@ function gameLoop(timestamp){
     }
 
     // FRAME ANIMATION
-    frameTimer+=delta;
-    if(frameTimer>frameInterval){
-      currentFrame=currentFrame===0?1:0;
-      frameTimer=0;
-    }
+    if(isFlapping){
+
+  flapTimer += delta;
+  frameTimer += delta;
+
+  if(frameTimer > frameInterval){
+    currentFrame = currentFrame === 0 ? 1 : 0;
+    frameTimer = 0;
+  }
+
+  if(flapTimer > flapDuration){
+    isFlapping = false;
+    currentFrame = 0; // kembali ke posisi diam
+  }
+
+}else{
+  currentFrame = 0; // diam
+}
 
     const birdImage=currentFrame===0?birdFrame1:birdFrame2;
     ctx.drawImage(birdImage,100,birdY,birdSize,birdSize);
@@ -445,6 +465,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
