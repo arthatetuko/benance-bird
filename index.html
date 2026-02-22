@@ -128,10 +128,6 @@ birdFrame2.src = "terra2.png";
 let currentFrame=0;
 let frameTimer=0;
 const frameInterval=0.12;
-  
-// ===== LOAD PIPE IMAGE =====
-const pipeImg = new Image();
-pipeImg.src = "blue_pipe.png";
 
 // ===== AUDIO =====
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -338,57 +334,33 @@ function gameLoop(timestamp){
 
       ctx.fillStyle="#003366";
       for(let i=pipes.length-1;i>=0;i--){
+        let pipe=pipes[i];
+        pipe.x-=pipeSpeed*delta;
 
-  let pipe = pipes[i];
-  pipe.x -= pipeSpeed * delta;
+        ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
+        ctx.fillRect(pipe.x,pipe.bottom,pipeWidth,canvas.height);
 
-  // ===== PIPE ATAS (dibalik) =====
-  ctx.save();
-  ctx.translate(pipe.x + pipeWidth/2, pipe.top);
-  ctx.scale(1, -1);
+        if(
+          100<pipe.x+pipeWidth &&
+          100+birdSize>pipe.x &&
+          (birdY<pipe.top || birdY+birdSize>pipe.bottom)
+        ){
+          gameOver=true;
+          flashAlpha=0.6;
+          playCrashSound();
+          saveScoreToDB();
+        }
 
-  ctx.drawImage(
-    pipeImg,
-    -pipeWidth/2,
-    0,
-    pipeWidth,
-    pipe.top
-  );
+        if(!pipe.passed && pipe.x<100){
+          pipe.passed=true;
+          score++;
+          document.getElementById("score").innerText=score;
+        }
 
-  ctx.restore();
+        if(pipe.x<-pipeWidth){pipes.splice(i,1);}
+      }
+    }
 
-  // ===== PIPE BAWAH =====
-  ctx.drawImage(
-    pipeImg,
-    pipe.x,
-    pipe.bottom,
-    pipeWidth,
-    canvas.height - pipe.bottom
-  );
-
-  // ===== COLLISION =====
-  if(
-    100 < pipe.x + pipeWidth &&
-    100 + birdSize > pipe.x &&
-    (birdY < pipe.top || birdY + birdSize > pipe.bottom)
-  ){
-    gameOver = true;
-    flashAlpha = 0.6;
-    playCrashSound();
-    saveScoreToDB();
-  }
-
-  // ===== SCORE =====
-  if(!pipe.passed && pipe.x < 100){
-    pipe.passed = true;
-    score++;
-    document.getElementById("score").innerText = score;
-  }
-
-  if(pipe.x < -pipeWidth){
-    pipes.splice(i,1);
-  }
-}
     // FRAME ANIMATION
     frameTimer+=delta;
     if(frameTimer>frameInterval){
@@ -449,8 +421,6 @@ function disconnectWallet(){
 
 </body>
 </html>
-
-
 
 
 
