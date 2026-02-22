@@ -64,12 +64,17 @@ button {
 
 <div id="menuBox">
   <h2>Main Menu</h2>
-  <button onclick="showConnectOptions()">Play Game</button>
+  <button onclick="showConnectOptions()">Play Game</button><br>
+  <button onclick="showLeaderboard()">Leaderboard</button><br>
+  <button onclick="showStatistic()">Statistic</button><br>
+  <button onclick="showRedeem()">Redeem</button><br>
+  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
 </div>
 
 <div id="connectChoice" style="display:none;">
   <h3>Choose Wallet</h3>
-  <button onclick="connectDesktop()">🖥 Connect Desktop</button>
+  <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
+  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
   <button onclick="backToMenu()">Back</button>
 </div>
 
@@ -79,14 +84,14 @@ button {
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas(){
+function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD FRAMES =====
+// ===== LOAD 2 FRAME IMAGES =====
 const birdFrame1 = new Image();
 birdFrame1.src = "terra1.png";
 
@@ -97,7 +102,7 @@ let currentFrame = 0;
 let frameTimer = 0;
 const frameInterval = 0.12;
 
-// ===== SOUND (8 BIT) =====
+// ===== AUDIO SYSTEM =====
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playJumpSound(){
@@ -105,10 +110,10 @@ function playJumpSound(){
   const gain = audioCtx.createGain();
 
   osc.type = "square";
-  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+  osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
 
-  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
 
   osc.connect(gain);
@@ -116,6 +121,24 @@ function playJumpSound(){
 
   osc.start();
   osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playCrashSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
 }
 
 // ===== STATE =====
@@ -138,7 +161,6 @@ document.getElementById("highscore").innerText = highscore;
 
 let lastTime = 0;
 let gameOver = false;
-
 let flashAlpha = 0;
 
 const birdSize = 70;
@@ -147,8 +169,8 @@ const pipeGap = 200;
 const pipeSpeed = 200;
 
 // ===== WALLET FORMAT =====
-function formatWallet(addr){
-  return addr.slice(0,6)+"..."+addr.slice(-4);
+function formatWallet(address){
+  return address.slice(0,6) + "..." + address.slice(-4);
 }
 
 // ===== MENU =====
@@ -161,11 +183,13 @@ function backToMenu(){
   document.getElementById("menuBox").style.display="block";
 }
 
+// ===== CONNECT =====
 async function connectDesktop(){
   if(!window.keplr){
-    alert("Keplr not detected");
+    alert("Keplr Extension not detected");
     return;
   }
+
   try{
     await window.keplr.enable("columbus-5");
     const signer = window.getOfflineSigner("columbus-5");
@@ -179,13 +203,18 @@ async function connectDesktop(){
   }
 }
 
+function connectMobile(){
+  alert("Open inside Keplr Mobile Browser.");
+}
+
+// ===== START =====
 function startGame(){
   document.getElementById("connectChoice").style.display="none";
   document.getElementById("ui").style.display="block";
   canvas.style.display="block";
 
   document.getElementById("walletStatus").innerText =
-    "Wallet: "+formatWallet(connectedWallet);
+    "Wallet: " + formatWallet(connectedWallet);
 
   gameRunning = true;
 }
@@ -225,6 +254,7 @@ function gameLoop(timestamp){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     if(!gameOver){
+
       velocity+=gravity*delta;
       birdY+=velocity*delta;
 
@@ -248,7 +278,8 @@ function gameLoop(timestamp){
           (birdY<pipe.top || birdY+birdSize>pipe.bottom)
         ){
           gameOver=true;
-          flashAlpha=0.5;
+          flashAlpha=0.6;
+          playCrashSound();
         }
 
         if(!pipe.passed && pipe.x<100){
@@ -268,11 +299,12 @@ function gameLoop(timestamp){
 
       if(birdY>canvas.height-birdSize){
         gameOver=true;
-        flashAlpha=0.5;
+        flashAlpha=0.6;
+        playCrashSound();
       }
     }
 
-    // ===== FRAME ANIMATION =====
+    // FRAME ANIMATION
     frameTimer+=delta;
     if(frameTimer>frameInterval){
       currentFrame = currentFrame===0?1:0;
@@ -281,30 +313,15 @@ function gameLoop(timestamp){
 
     const birdImage = currentFrame===0?birdFrame1:birdFrame2;
 
-    // ===== ROTATION =====
-    let rotation = velocity * 0.002;
-    if(rotation>0.5) rotation=0.5;
-    if(rotation<-0.5) rotation=-0.5;
-
-    ctx.save();
-    ctx.translate(100+birdSize/2, birdY+birdSize/2);
-    ctx.rotate(rotation);
-
-    // ===== SHADOW =====
-    ctx.fillStyle="rgba(0,0,0,0.3)";
-    ctx.fillRect(-birdSize/2+5, birdSize/2-5, birdSize, 10);
-
     ctx.drawImage(
       birdImage,
-      -birdSize/2,
-      -birdSize/2,
+      100,
+      birdY,
       birdSize,
       birdSize
     );
 
-    ctx.restore();
-
-    // ===== HIT FLASH =====
+    // FLASH RED EFFECT
     if(flashAlpha>0){
       ctx.fillStyle="rgba(255,0,0,"+flashAlpha+")";
       ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -324,7 +341,9 @@ function gameLoop(timestamp){
 Promise.all([
   new Promise(res=>birdFrame1.onload=res),
   new Promise(res=>birdFrame2.onload=res)
-]).then(()=>requestAnimationFrame(gameLoop));
+]).then(()=>{
+  requestAnimationFrame(gameLoop);
+});
 
 // ===== RESET =====
 function resetGame(){
@@ -335,6 +354,7 @@ function resetGame(){
   birdY=200;
   pipeTimer=0;
   gameOver=false;
+  flashAlpha=0;
 }
 
 // ===== DISCONNECT =====
