@@ -51,6 +51,12 @@ button {
   border-radius: 10px;
   text-align: center;
 }
+
+.panel {
+  display:none;
+  text-align:center;
+  margin-top:50px;
+}
 </style>
 </head>
 <body>
@@ -65,112 +71,115 @@ button {
 <div id="menuBox">
   <h2>Main Menu</h2>
   <button onclick="showConnectOptions()">Play Game</button><br>
-  <button onclick="showLeaderboard()">Leaderboard</button><br>
-  <button onclick="showStatistic()">Statistic</button><br>
-  <button onclick="showRedeem()">Redeem</button><br>
-  <button onclick="window.open('https://your-doc-link.com','_blank')">How To Play</button>
+  <button onclick="showLeaderboard()">Leaderboard</button>
 </div>
+
+<div id="leaderboardBox" class="panel"></div>
 
 <div id="connectChoice" style="display:none;">
   <h3>Choose Wallet</h3>
   <button onclick="connectDesktop()">🖥 Connect Desktop</button><br>
-  <button onclick="connectMobile()">📱 Connect Mobile</button><br>
   <button onclick="backToMenu()">Back</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+
+// ===== SUPABASE CONFIG =====
+const supabaseUrl = "https://vibidnpopslqvdfyddly.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpYmlkbnBvcHNscXZkZnlkZGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjkwODEsImV4cCI6MjA4NzMwNTA4MX0.cV9mxmvt4evYNOx0BVdfN7eXgl22zgYHb42yiLRgfqQ";
+
+const supabaseClient = window.supabase.createClient(
+  supabaseUrl,
+  supabaseKey
+);
+
+// ===== CANVAS =====
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
+function resizeCanvas(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// ===== LOAD 2 FRAME IMAGES =====
+// ===== LOAD IMAGES =====
 const birdFrame1 = new Image();
 birdFrame1.src = "terra1.png";
 
 const birdFrame2 = new Image();
 birdFrame2.src = "terra2.png";
 
-let currentFrame = 0;
-let frameTimer = 0;
-const frameInterval = 0.12;
+let currentFrame=0;
+let frameTimer=0;
+const frameInterval=0.12;
 
-// ===== AUDIO SYSTEM =====
+// ===== AUDIO =====
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playJumpSound(){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-
-  osc.type = "square";
-  osc.frequency.setValueAtTime(700, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
-
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-
+  osc.type="square";
+  osc.frequency.setValueAtTime(700,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(300,audioCtx.currentTime+0.1);
+  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.1);
+  osc.stop(audioCtx.currentTime+0.1);
 }
 
 function playCrashSound(){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-
-  osc.type = "square";
-  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
-
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-
+  osc.type="square";
+  osc.frequency.setValueAtTime(120,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40,audioCtx.currentTime+0.3);
+  gain.gain.setValueAtTime(0.2,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.3);
+  osc.stop(audioCtx.currentTime+0.3);
 }
 
 // ===== STATE =====
-let walletConnected = false;
-let connectedWallet = null;
-let gameRunning = false;
+let walletConnected=false;
+let connectedWallet=null;
+let gameRunning=false;
 
-let birdY = 200;
-let velocity = 0;
-let gravity = 1200;
-let jumpForce = -450;
+let birdY=200;
+let velocity=0;
+let gravity=1200;
+let jumpForce=-450;
 
-let pipes = [];
-let pipeTimer = 0;
-let pipeInterval = 2;
+let pipes=[];
+let pipeTimer=0;
+let pipeInterval=2;
 
-let score = 0;
-let highscore = parseInt(localStorage.getItem("highscore")) || 0;
-document.getElementById("highscore").innerText = highscore;
+let score=0;
+let highscore=0;
 
-let lastTime = 0;
-let gameOver = false;
-let flashAlpha = 0;
+let lastTime=0;
+let gameOver=false;
+let flashAlpha=0;
 
-const birdSize = 70;
-const pipeWidth = 70;
-const pipeGap = 200;
-const pipeSpeed = 200;
+const birdSize=70;
+const pipeWidth=70;
+const pipeGap=200;
+const pipeSpeed=200;
 
-// ===== WALLET FORMAT =====
-function formatWallet(address){
-  return address.slice(0,6) + "..." + address.slice(-4);
+// ===== FORMAT WALLET =====
+function formatWallet(addr){
+  return addr.slice(0,6)+"..."+addr.slice(-4);
 }
 
 // ===== MENU =====
@@ -195,16 +204,82 @@ async function connectDesktop(){
     const signer = window.getOfflineSigner("columbus-5");
     const accounts = await signer.getAccounts();
 
-    connectedWallet = accounts[0].address;
-    walletConnected = true;
+    connectedWallet=accounts[0].address;
+    walletConnected=true;
+
+    await loadHighscoreFromDB();
+
     startGame();
   }catch{
     alert("Connection failed");
   }
 }
 
-function connectMobile(){
-  alert("Open inside Keplr Mobile Browser.");
+// ===== LOAD USER HIGHSCORE =====
+async function loadHighscoreFromDB(){
+  const { data } = await supabaseClient
+    .from("leaderboard")
+    .select("*")
+    .eq("wallet",connectedWallet)
+    .single();
+
+  if(data){
+    highscore=data.highscore;
+  } else {
+    highscore=0;
+  }
+
+  document.getElementById("highscore").innerText=highscore;
+}
+
+// ===== SAVE SCORE =====
+async function saveScoreToDB(){
+
+  const { data } = await supabaseClient
+    .from("leaderboard")
+    .select("*")
+    .eq("wallet",connectedWallet)
+    .single();
+
+  if(data){
+    if(score>data.highscore){
+      await supabaseClient
+        .from("leaderboard")
+        .update({highscore:score})
+        .eq("wallet",connectedWallet);
+    }
+  } else {
+    await supabaseClient
+      .from("leaderboard")
+      .insert({wallet:connectedWallet,highscore:score});
+  }
+}
+
+// ===== SHOW LEADERBOARD =====
+async function showLeaderboard(){
+
+  const { data } = await supabaseClient
+    .from("leaderboard")
+    .select("*")
+    .order("highscore",{ascending:false})
+    .limit(10);
+
+  let html="<h2>Top 10 Leaderboard</h2>";
+
+  data.forEach((row,i)=>{
+    html+=`<p>${i+1}. ${formatWallet(row.wallet)} - ${row.highscore}</p>`;
+  });
+
+  html+="<br><button onclick='closeLeaderboard()'>Back</button>";
+
+  document.getElementById("leaderboardBox").innerHTML=html;
+  document.getElementById("leaderboardBox").style.display="block";
+  document.getElementById("menuBox").style.display="none";
+}
+
+function closeLeaderboard(){
+  document.getElementById("leaderboardBox").style.display="none";
+  document.getElementById("menuBox").style.display="block";
 }
 
 // ===== START =====
@@ -213,40 +288,40 @@ function startGame(){
   document.getElementById("ui").style.display="block";
   canvas.style.display="block";
 
-  document.getElementById("walletStatus").innerText =
-    "Wallet: " + formatWallet(connectedWallet);
+  document.getElementById("walletStatus").innerText=
+    "Wallet: "+formatWallet(connectedWallet);
 
-  gameRunning = true;
+  gameRunning=true;
 }
 
 // ===== INPUT =====
 function jump(){
-  if(!gameRunning) return;
+  if(!gameRunning)return;
 
   if(gameOver){
     resetGame();
     return;
   }
 
-  velocity = jumpForce;
+  velocity=jumpForce;
   playJumpSound();
 }
-window.addEventListener("keydown", e=>{ if(e.code==="Space") jump();});
-window.addEventListener("touchstart", jump);
+window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
+window.addEventListener("touchstart",jump);
 
 // ===== PIPE =====
 function createPipe(){
-  const top = Math.random()*(canvas.height-pipeGap-100)+50;
+  const top=Math.random()*(canvas.height-pipeGap-100)+50;
   pipes.push({x:canvas.width,top:top,bottom:top+pipeGap,passed:false});
 }
 
 // ===== GAME LOOP =====
 function gameLoop(timestamp){
 
-  if(!lastTime) lastTime=timestamp;
+  if(!lastTime)lastTime=timestamp;
   let delta=(timestamp-lastTime)/1000;
   lastTime=timestamp;
-  if(delta>0.033) delta=0.033;
+  if(delta>0.033)delta=0.033;
 
   if(gameRunning){
 
@@ -280,48 +355,35 @@ function gameLoop(timestamp){
           gameOver=true;
           flashAlpha=0.6;
           playCrashSound();
+          saveScoreToDB();
         }
 
         if(!pipe.passed && pipe.x<100){
           pipe.passed=true;
           score++;
           document.getElementById("score").innerText=score;
-
-          if(score>highscore){
-            highscore=score;
-            localStorage.setItem("highscore",highscore);
-            document.getElementById("highscore").innerText=highscore;
-          }
         }
 
-        if(pipe.x<-pipeWidth){ pipes.splice(i,1);}
+        if(pipe.x<-pipeWidth){pipes.splice(i,1);}
       }
 
       if(birdY>canvas.height-birdSize){
         gameOver=true;
         flashAlpha=0.6;
         playCrashSound();
+        saveScoreToDB();
       }
     }
 
-    // FRAME ANIMATION
     frameTimer+=delta;
     if(frameTimer>frameInterval){
-      currentFrame = currentFrame===0?1:0;
+      currentFrame=currentFrame===0?1:0;
       frameTimer=0;
     }
 
-    const birdImage = currentFrame===0?birdFrame1:birdFrame2;
+    const birdImage=currentFrame===0?birdFrame1:birdFrame2;
+    ctx.drawImage(birdImage,100,birdY,birdSize,birdSize);
 
-    ctx.drawImage(
-      birdImage,
-      100,
-      birdY,
-      birdSize,
-      birdSize
-    );
-
-    // FLASH RED EFFECT
     if(flashAlpha>0){
       ctx.fillStyle="rgba(255,0,0,"+flashAlpha+")";
       ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -341,9 +403,7 @@ function gameLoop(timestamp){
 Promise.all([
   new Promise(res=>birdFrame1.onload=res),
   new Promise(res=>birdFrame2.onload=res)
-]).then(()=>{
-  requestAnimationFrame(gameLoop);
-});
+]).then(()=>requestAnimationFrame(gameLoop));
 
 // ===== RESET =====
 function resetGame(){
