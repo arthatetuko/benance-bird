@@ -169,21 +169,35 @@ function playCrashSound(){
 }
 
 function playScoreSound(){
-  const osc = audioCtx.createOscillator();
+
+  const now = audioCtx.currentTime;
+
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
-  osc.type = "square";
-  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+  osc1.type = "square";
+  osc2.type = "triangle";
 
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  // Nada coin naik cepat
+  osc1.frequency.setValueAtTime(800, now);
+  osc1.frequency.exponentialRampToValueAtTime(1400, now + 0.12);
 
-  osc.connect(gain);
+  osc2.frequency.setValueAtTime(1200, now);
+  osc2.frequency.exponentialRampToValueAtTime(2000, now + 0.12);
+
+  gain.gain.setValueAtTime(0.25, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+  osc1.connect(gain);
+  osc2.connect(gain);
   gain.connect(audioCtx.destination);
 
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.1);
+  osc1.start(now);
+  osc2.start(now);
+
+  osc1.stop(now + 0.15);
+  osc2.stop(now + 0.15);
 }
 
 // ===== STATE =====
@@ -493,6 +507,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
