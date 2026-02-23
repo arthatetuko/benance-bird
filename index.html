@@ -400,14 +400,14 @@ function startGame(){
 
 // ===== INPUT =====
 function jump(){
-  if(!gameRunning)return;
+
+  if(!gameRunning) return;
 
   if(gameOver){
-    resetGame();
-    return;
+    return; // ← STOP restart otomatis
   }
 
-  velocity=jumpForce;
+  velocity = jumpForce;
   playJumpSound();
 
   isFlapping = true;
@@ -416,6 +416,27 @@ function jump(){
 window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 window.addEventListener("touchstart",jump);
 window.addEventListener("mousedown", jump);
+canvas.addEventListener("click", function(e){
+
+  if(!gameOver) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const centerX = canvas.width / 2;
+  const restartY = canvas.height / 2 + 20;
+
+  // Area restart text (lebar 300px, tinggi 40px)
+  if(
+    x > centerX - 150 &&
+    x < centerX + 150 &&
+    y > restartY - 20 &&
+    y < restartY + 20
+  ){
+    resetGame();
+  }
+});
 
 // ===== PIPE =====
 function createPipe(){
@@ -591,17 +612,31 @@ else{
   ctx.fillText(
     "GAME OVER",
     canvas.width / 2,
-    canvas.height / 2
+    canvas.height / 2 - 40
   );
 
-  if(!claimButtonShown){
+  // Restart Text
+  ctx.font = "24px Arial";
+  ctx.fillText(
+    "Tap here to start again",
+    canvas.width / 2,
+    canvas.height / 2 + 20
+  );
+
+  // ===== CLAIM BUTTON (only if score > 0) =====
+  if(score > 0 && !claimButtonShown){
 
     const claimBtn = document.createElement("button");
     claimBtn.innerText = "Claim LUNC";
     claimBtn.id = "claimBtn";
+    claimBtn.style.position = "absolute";
+    claimBtn.style.left = "50%";
+    claimBtn.style.top = "60%";
+    claimBtn.style.transform = "translate(-50%, -50%)";
+
     claimBtn.onclick = claimReward;
 
-    document.getElementById("ui").appendChild(claimBtn);
+    document.body.appendChild(claimBtn);
 
     claimButtonShown = true;
   }
@@ -625,9 +660,9 @@ function resetGame(){
 
   claimButtonShown = false;
 
-  const existingBtn = document.getElementById("claimBtn");
-  if(existingBtn){
-    existingBtn.remove();
+  const btn = document.getElementById("claimBtn");
+  if(btn){
+    btn.remove();
   }
 }
 
@@ -695,6 +730,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
