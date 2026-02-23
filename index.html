@@ -421,6 +421,7 @@ function jump(){
 }
 window.addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 window.addEventListener("touchstart",jump);
+window.addEventListener("mousedown", jump);
 
 // ===== PIPE =====
 function createPipe(){
@@ -628,6 +629,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
