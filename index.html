@@ -245,7 +245,9 @@ let flashAlpha=0;
 
 const birdSize=70;
 const pipeWidth=70;
-const pipeGap=200;
+const basePipeGap = 200;
+let currentPipeGap = basePipeGap;
+let currentLevel = 1;
 const pipeSpeed=200;
 
 function formatWallet(addr){
@@ -422,8 +424,17 @@ window.addEventListener("touchstart",jump);
 
 // ===== PIPE =====
 function createPipe(){
-  const top=Math.random()*(canvas.height-pipeGap-100)+50;
-  pipes.push({x:canvas.width,top:top,bottom:top+pipeGap,passed:false});
+
+  const top = Math.random()*(canvas.height-currentPipeGap-100)+50;
+
+  pipes.push({
+    x: canvas.width,
+    baseTop: top,
+    top: top,
+    bottom: top + currentPipeGap,
+    passed:false,
+    offset: Math.random() * Math.PI * 2 // untuk gerakan sin wave
+  });
 }
 
 // ===== LOOP =====
@@ -466,6 +477,20 @@ function gameLoop(timestamp){
       for(let i=pipes.length-1;i>=0;i--){
   let pipe=pipes[i];
   pipe.x-=pipeSpeed*delta;
+        // ===== LEVEL 4 DYNAMIC PIPE =====
+if(currentLevel === 4){
+
+  const amplitude = 40; // tinggi gerakan
+  const speed = 2;      // kecepatan gerakan
+
+  pipe.top = pipe.baseTop + Math.sin(timestamp/1000 * speed + pipe.offset) * amplitude;
+  pipe.bottom = pipe.top + currentPipeGap;
+
+}
+else{
+  pipe.top = pipe.baseTop;
+  pipe.bottom = pipe.top + currentPipeGap;
+}
 
   // ===== PIPE ATAS (DIBALIK) =====
   ctx.save();
@@ -502,6 +527,23 @@ function gameLoop(timestamp){
           saveScoreToDB();
         }
 
+        // ===== LEVEL SYSTEM =====
+if(score >= 30){
+  currentLevel = 4;
+  currentPipeGap = basePipeGap * 0.75 * 0.75;
+}
+else if(score >= 20){
+  currentLevel = 3;
+  currentPipeGap = basePipeGap * 0.75 * 0.75;
+}
+else if(score >= 10){
+  currentLevel = 2;
+  currentPipeGap = basePipeGap * 0.75;
+}
+else{
+  currentLevel = 1;
+  currentPipeGap = basePipeGap;
+}
         if(!pipe.passed && pipe.x<100){
   pipe.passed=true;
   score++;
@@ -586,6 +628,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
