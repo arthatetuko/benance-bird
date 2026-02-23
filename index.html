@@ -530,15 +530,15 @@ else{
         // ===== LEVEL SYSTEM =====
 if(score >= 30){
   currentLevel = 4;
-  currentPipeGap = basePipeGap * 0.9 * 0.9;
+  currentPipeGap = basePipeGap * 0.95 * 0.95;
 }
 else if(score >= 20){
   currentLevel = 3;
-  currentPipeGap = basePipeGap * 0.9 * 0.9;
+  currentPipeGap = basePipeGap * 0.95 * 0.95;
 }
 else if(score >= 10){
   currentLevel = 2;
-  currentPipeGap = basePipeGap * 0.9;
+  currentPipeGap = basePipeGap * 0.95;
 }
 else{
   currentLevel = 1;
@@ -628,6 +628,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
