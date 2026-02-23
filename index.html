@@ -622,6 +622,13 @@ function resetGame(){
   pipeTimer=0;
   gameOver=false;
   flashAlpha=0;
+
+  claimButtonShown = false;
+
+  const existingBtn = document.getElementById("claimBtn");
+  if(existingBtn){
+    existingBtn.remove();
+  }
 }
 
 function disconnectWallet(){
@@ -683,6 +690,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
