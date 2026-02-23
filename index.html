@@ -188,32 +188,25 @@ function playScoreSound(){
 
   const now = audioCtx.currentTime;
 
-  const osc1 = audioCtx.createOscillator();
-  const osc2 = audioCtx.createOscillator();
+  const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
-  osc1.type = "square";
-  osc2.type = "triangle";
+  // Bell lebih cocok pakai sine / triangle
+  osc.type = "sine";
 
-  // Nada coin naik cepat
-  osc1.frequency.setValueAtTime(800, now);
-  osc1.frequency.exponentialRampToValueAtTime(1400, now + 0.12);
+  // Nada bell tinggi
+  osc.frequency.setValueAtTime(1500, now);
+  osc.frequency.exponentialRampToValueAtTime(2200, now + 0.15);
 
-  osc2.frequency.setValueAtTime(1200, now);
-  osc2.frequency.exponentialRampToValueAtTime(2000, now + 0.12);
+  // Envelope bell (lebih sustain sedikit)
+  gain.gain.setValueAtTime(0.35, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
-  gain.gain.setValueAtTime(0.25, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-
-  osc1.connect(gain);
-  osc2.connect(gain);
+  osc.connect(gain);
   gain.connect(audioCtx.destination);
 
-  osc1.start(now);
-  osc2.start(now);
-
-  osc1.stop(now + 0.15);
-  osc2.stop(now + 0.15);
+  osc.start(now);
+  osc.stop(now + 0.4);
 }
 
 // ===== STATE =====
@@ -629,6 +622,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
