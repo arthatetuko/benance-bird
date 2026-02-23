@@ -679,6 +679,11 @@ function disconnectWallet(){
 
     console.log("Signature:", data.signature);
     alert("Signature received. Backend working!");
+    const btn = document.getElementById("claimBtn");
+if(btn){
+  btn.disabled = true;
+  btn.innerText = "Claimed";
+}
 
   } catch (error){
     console.log(error);
@@ -690,6 +695,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
