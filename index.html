@@ -595,8 +595,13 @@ else{
   );
 
   if(!claimButtonShown){
-    document.getElementById("ui").innerHTML += 
-      '<br><button onclick="claimReward()">Claim LUNC</button>';
+
+    const claimBtn = document.createElement("button");
+    claimBtn.innerText = "Claim LUNC";
+    claimBtn.onclick = claimReward;
+
+    document.getElementById("ui").appendChild(claimBtn);
+
     claimButtonShown = true;
   }
 }
@@ -618,12 +623,14 @@ function resetGame(){
 
   claimButtonShown = false;
 
-  document.getElementById("ui").innerHTML = `
-    <div id="walletStatus"></div>
-    <button onclick="disconnectWallet()">Disconnect</button>
-    <div>Score: <span id="score">0</span></div>
-    <div>Highscore: <span id="highscore">0</span></div>
-  `;
+  const ui = document.getElementById("ui");
+  const buttons = ui.querySelectorAll("button");
+
+  buttons.forEach(btn => {
+    if(btn.innerText === "Claim LUNC"){
+      btn.remove();
+    }
+  });
 }
 
 function disconnectWallet(){
@@ -651,7 +658,7 @@ function disconnectWallet(){
   try {
 
     const response = await fetch(
-      "https://benance-backend.vercel.app",
+      "https://benance-backend.vercel.app/api/sign",
       {
         method: "POST",
         headers: {
@@ -685,6 +692,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
