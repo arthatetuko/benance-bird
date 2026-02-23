@@ -618,10 +618,59 @@ function disconnectWallet(){
   canvas.style.display="none";
   document.getElementById("menuBox").style.display="block";
 }
+
+  async function claimReward() {
+
+  if(!connectedWallet){
+    alert("Wallet not connected");
+    return;
+  }
+
+  if(score <= 0){
+    alert("Score is zero");
+    return;
+  }
+
+  const timestamp = Date.now();
+
+  try {
+
+    const response = await fetch(
+      "https://benance-backend.vercel.app",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          wallet: connectedWallet,
+          score: score,
+          timestamp: timestamp
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.signature) {
+      alert("Signature failed");
+      return;
+    }
+
+    console.log("Signature:", data.signature);
+    alert("Signature received. Backend working!");
+
+  } catch (error){
+    console.log(error);
+    alert("Error connecting to backend");
+  }
+}
+  
 </script>
 
 </body>
 </html>
+
 
 
 
