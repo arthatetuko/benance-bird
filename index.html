@@ -671,17 +671,26 @@ function disconnectWallet(){
   connectedWallet = null;
   gameRunning = false;
 
-  document.getElementById("ui").style.display = "none";
-  canvas.style.display = "none";
-  document.getElementById("menuBox").style.display = "block";
-
-  // ===== HAPUS CLAIM BUTTON =====
+  // ===== RESET TOTAL GAME STATE =====
+  score = 0;
+  pipes = [];
+  velocity = 0;
+  birdY = 200;
+  pipeTimer = 0;
+  gameOver = false;
+  flashAlpha = 0;
   claimButtonShown = false;
+
+  document.getElementById("score").innerText = 0;
 
   const btn = document.getElementById("claimBtn");
   if(btn){
     btn.remove();
   }
+
+  document.getElementById("ui").style.display = "none";
+  canvas.style.display = "none";
+  document.getElementById("menuBox").style.display = "block";
 }
 
   async function claimReward() {
@@ -740,6 +749,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
