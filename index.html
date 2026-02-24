@@ -624,7 +624,7 @@ else{
   );
 
   // ===== CLAIM BUTTON (only if score > 0) =====
-  if(score > 0 && !claimButtonShown){
+  if(score > 5 && !claimButtonShown){
 
     const claimBtn = document.createElement("button");
     claimBtn.innerText = "Claim LUNC";
@@ -730,6 +730,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
