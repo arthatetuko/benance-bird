@@ -178,14 +178,14 @@ function playJumpSound(){
   osc.frequency.exponentialRampToValueAtTime(350, now + 0.08);
 
   // Volume lebih kecil
-  gain.gain.setValueAtTime(0.08, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  gain.gain.setValueAtTime(0.16, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
   osc.connect(gain);
   gain.connect(audioCtx.destination);
 
   osc.start(now);
-  osc.stop(now + 0.08);
+  osc.stop(now + 0.1);
 }
 
 function playCrashSound(){
@@ -767,6 +767,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
