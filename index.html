@@ -667,11 +667,21 @@ function resetGame(){
 }
 
 function disconnectWallet(){
-  connectedWallet=null;
-  gameRunning=false;
-  document.getElementById("ui").style.display="none";
-  canvas.style.display="none";
-  document.getElementById("menuBox").style.display="block";
+
+  connectedWallet = null;
+  gameRunning = false;
+
+  document.getElementById("ui").style.display = "none";
+  canvas.style.display = "none";
+  document.getElementById("menuBox").style.display = "block";
+
+  // ===== HAPUS CLAIM BUTTON =====
+  claimButtonShown = false;
+
+  const btn = document.getElementById("claimBtn");
+  if(btn){
+    btn.remove();
+  }
 }
 
   async function claimReward() {
@@ -730,6 +740,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
