@@ -156,18 +156,36 @@ const frameInterval=0.12;
 // ===== AUDIO =====
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+let lastJumpSoundTime = 0;
+
 function playJumpSound(){
+
+  const now = audioCtx.currentTime;
+
+  // Prevent sound spam (minimal 100ms interval)
+  if(now - lastJumpSoundTime < 0.1){
+    return;
+  }
+
+  lastJumpSoundTime = now;
+
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type="square";
-  osc.frequency.setValueAtTime(700,audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(300,audioCtx.currentTime+0.1);
-  gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
+
+  osc.type = "sine"; // lebih lembut dari square
+
+  osc.frequency.setValueAtTime(600, now);
+  osc.frequency.exponentialRampToValueAtTime(350, now + 0.08);
+
+  // Volume lebih kecil
+  gain.gain.setValueAtTime(0.08, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime+0.1);
+
+  osc.start(now);
+  osc.stop(now + 0.08);
 }
 
 function playCrashSound(){
@@ -749,6 +767,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
