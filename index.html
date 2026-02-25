@@ -113,10 +113,9 @@ button {
 <canvas id="gameCanvas"></canvas>
 
 <script src="https://unpkg.com/@cosmjs/cosmwasm-stargate@0.28.1/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
   
 <script>
-import { SigningCosmWasmClient } from 
-"https://esm.sh/@cosmjs/cosmwasm-stargate@0.31.3";
   
 // ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
@@ -328,8 +327,8 @@ async function connectDesktop(){
     return;
   }
 
-  await window.keplr.enable("columbus-5");
-  const signer = window.getOfflineSigner("columbus-5");
+  await window.keplr.enable("rebel-2");
+const signer = window.getOfflineSigner("rebel-2");
   const accounts = await signer.getAccounts();
 
   connectedWallet=accounts[0].address;
@@ -714,6 +713,11 @@ function disconnectWallet(){
   document.getElementById("menuBox").style.display = "block";
 }
 
+function backToMenu(){
+  document.getElementById("connectChoice").style.display = "none";
+  document.getElementById("menuBox").style.display = "block";
+}  
+  
   async function claimReward() {
 
   if (!connectedWallet) {
@@ -761,7 +765,7 @@ function disconnectWallet(){
 
     // 3️⃣ Connect client
     const client =
-  await window.cosmwasm.SigningCosmWasmClient.connectWithSigner(
+  await window.SigningCosmWasmClient.connectWithSigner(
         "https://rpc.terra-classic.hexxagon.dev",
         offlineSigner
       );
@@ -797,6 +801,7 @@ window.startGame = startGame;
 
 </body>
 </html>
+
 
 
 
