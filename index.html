@@ -114,16 +114,77 @@ button {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 <script type="module">
-  import {
-    SigningCosmWasmClient
-  } from "https://esm.sh/@cosmjs/cosmwasm-stargate@0.32.4";
 
-  window.SigningCosmWasmClient = SigningCosmWasmClient;
+import { SigningCosmWasmClient }
+from "https://esm.sh/@cosmjs/cosmwasm-stargate@0.32.4";
+
+async function claimReward() {
+
+  if (!connectedWallet) {
+    alert("Wallet not connected");
+    return;
+  }
+
+  if (score <= 0) {
+    alert("Score is zero");
+    return;
+  }
+
+  try {
+
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    const signResponse = await fetch(
+      "https://benance-backend.vercel.app/api/sign",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: connectedWallet,
+          score,
+          timestamp
+        })
+      }
+    );
+
+    const signData = await signResponse.json();
+
+    await window.keplr.enable("rebel-2");
+
+    const offlineSigner = window.keplr.getOfflineSigner("rebel-2");
+    const accounts = await offlineSigner.getAccounts();
+
+    const client = await SigningCosmWasmClient.connectWithSigner(
+      "https://rpc.terra-classic.hexxagon.dev",
+      offlineSigner
+    );
+
+    await client.execute(
+      accounts[0].address,
+      CONTRACT_ADDRESS,
+      {
+        claim: {
+          score,
+          timestamp,
+          signature: signData.signature
+        }
+      },
+      "auto"
+    );
+
+    alert("Claim success!");
+
+  } catch (error) {
+    console.error(error);
+    alert("Claim failed");
+  }
+}
+
+window.claimReward = claimReward;
+
 </script>
 
 <script>
-  
-const SigningCosmWasmClient = window.SigningCosmWasmClient;
   
 // ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
@@ -799,6 +860,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
