@@ -113,9 +113,10 @@ button {
 <canvas id="gameCanvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@cosmjs/cosmwasm-stargate@0.31.3/build/index.umd.js"></script>
   
-<script>
+<script type="module">
+import { SigningCosmWasmClient } from
+"https://cdn.skypack.dev/@cosmjs/cosmwasm-stargate";
   
 // ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
@@ -728,11 +729,6 @@ function disconnectWallet(){
   try {
 
     // 🔎 Pastikan CosmJS sudah load
-    if (!window.cosmwasmStargate) {
-      alert("CosmJS not loaded");
-      console.log("cosmwasmStargate:", window.cosmwasmStargate);
-      return;
-    }
 
     const timestamp = Math.floor(Date.now() / 1000);
 
@@ -765,7 +761,7 @@ function disconnectWallet(){
 
     // 3️⃣ Connect client
     const client =
-      await window.cosmwasmStargate.SigningCosmWasmClient.connectWithSigner(
+  await SigningCosmWasmClient.connectWithSigner(
         "https://rpc.terra-classic.hexxagon.dev",
         offlineSigner
       );
@@ -796,6 +792,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
