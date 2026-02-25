@@ -113,77 +113,8 @@ button {
 <canvas id="gameCanvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
-<script type="module">
-
-import { SigningCosmWasmClient }
-from "https://esm.sh/@cosmjs/cosmwasm-stargate@0.32.4";
-
-async function claimReward() {
-
-  if (!connectedWallet) {
-    alert("Wallet not connected");
-    return;
-  }
-
-  if (score <= 0) {
-    alert("Score is zero");
-    return;
-  }
-
-  try {
-
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const signResponse = await fetch(
-      "https://benance-backend.vercel.app/api/sign",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet: connectedWallet,
-          score,
-          timestamp
-        })
-      }
-    );
-
-    const signData = await signResponse.json();
-
-    await window.keplr.enable("rebel-2");
-
-    const offlineSigner = window.keplr.getOfflineSigner("rebel-2");
-    const accounts = await offlineSigner.getAccounts();
-
-    const client = await SigningCosmWasmClient.connectWithSigner(
-      "https://rpc.terra-classic.hexxagon.dev",
-      offlineSigner
-    );
-
-    await client.execute(
-      accounts[0].address,
-      CONTRACT_ADDRESS,
-      {
-        claim: {
-          score,
-          timestamp,
-          signature: signData.signature
-        }
-      },
-      "auto"
-    );
-
-    alert("Claim success!");
-
-  } catch (error) {
-    console.error(error);
-    alert("Claim failed");
-  }
-}
-
-window.claimReward = claimReward;
-
-</script>
-
+<script src="https://unpkg.com/@cosmjs/cosmwasm-stargate@0.32.4/build/index.umd.js"></script>
+  
 <script>
   
 // ===== SUPABASE =====
@@ -796,8 +727,16 @@ function disconnectWallet(){
 
   try {
 
+    // 🔎 Pastikan CosmJS sudah load
+    if (!window.cosmwasmStargate) {
+      alert("CosmJS not loaded");
+      console.log("cosmwasmStargate:", window.cosmwasmStargate);
+      return;
+    }
+
     const timestamp = Math.floor(Date.now() / 1000);
 
+    // 1️⃣ Request signature
     const signResponse = await fetch(
       "https://benance-backend.vercel.app/api/sign",
       {
@@ -805,8 +744,8 @@ function disconnectWallet(){
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wallet: connectedWallet,
-          score: score,
-          timestamp: timestamp
+          score,
+          timestamp
         })
       }
     );
@@ -814,44 +753,41 @@ function disconnectWallet(){
     const signData = await signResponse.json();
 
     if (!signData.signature) {
-      alert("Failed to get signature");
+      alert("No signature returned");
       return;
     }
 
-    const signature = signData.signature;
-
-    // ✅ Enable Keplr
+    // 2️⃣ Enable Keplr
     await window.keplr.enable("rebel-2");
 
-    // ✅ Get signer
     const offlineSigner = window.keplr.getOfflineSigner("rebel-2");
     const accounts = await offlineSigner.getAccounts();
 
-    // ✅ Connect CosmWasm client
-    const client = await window.SigningCosmWasmClient.connectWithSigner(
-      "https://rpc.terra-classic.hexxagon.dev",
-      offlineSigner
-    );
+    // 3️⃣ Connect client
+    const client =
+      await window.cosmwasmStargate.SigningCosmWasmClient.connectWithSigner(
+        "https://rpc.terra-classic.hexxagon.dev",
+        offlineSigner
+      );
 
-    // ✅ Execute
-    const result = await client.execute(
+    // 4️⃣ Execute contract
+    await client.execute(
       accounts[0].address,
       CONTRACT_ADDRESS,
       {
         claim: {
-          score: score,
-          timestamp: timestamp,
-          signature: signature
+          score,
+          timestamp,
+          signature: signData.signature
         }
       },
       "auto"
     );
 
-    console.log(result);
     alert("Claim success!");
 
   } catch (error) {
-    console.error(error);
+    console.error("CLAIM ERROR:", error);
     alert("Claim failed");
   }
 }
@@ -860,6 +796,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
