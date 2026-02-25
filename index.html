@@ -345,7 +345,6 @@ if(balance >= REQUIRED_BALANCE){
   showInsufficientBalance();
 }
 }
-window.connectDesktop = connectDesktop;
   
 // ===== LOAD HIGHSCORE =====
 async function loadHighscoreFromDB(){
@@ -788,12 +787,17 @@ function disconnectWallet(){
     alert("Claim failed");
   }
 }
+window.connectDesktop = connectDesktop;
+window.showLeaderboard = showLeaderboard;
 window.claimReward = claimReward;
+window.backToMenu = backToMenu;
+window.startGame = startGame;
   
 </script>
 
 </body>
 </html>
+
 
 
 
