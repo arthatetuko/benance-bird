@@ -112,7 +112,6 @@ button {
 
 <canvas id="gameCanvas"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/@cosmjs/cosmwasm-stargate@0.31.3/build/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
   
 <script>
@@ -725,18 +724,16 @@ function backToMenu(){
     return;
   }
 
-  if (score <= 0) {
-    alert("Score is zero");
+  if (score <= 5) {
+    alert("Minimum score is 6 to claim");
     return;
   }
 
   try {
 
-    // 🔎 Pastikan CosmJS sudah load
-
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // 1️⃣ Request signature
+    // 1️⃣ Get signature from backend
     const signResponse = await fetch(
       "https://benance-backend.vercel.app/api/sign",
       {
@@ -753,38 +750,51 @@ function backToMenu(){
     const signData = await signResponse.json();
 
     if (!signData.signature) {
-      alert("No signature returned");
+      alert("Signature not returned");
       return;
     }
 
     // 2️⃣ Enable Keplr
     await window.keplr.enable("rebel-2");
 
-    const offlineSigner = window.keplr.getOfflineSigner("rebel-2");
+    const offlineSigner = window.getOfflineSigner("rebel-2");
     const accounts = await offlineSigner.getAccounts();
 
-    // 3️⃣ Connect client
-    const client =
-  await window.cosmwasmStargate.SigningCosmWasmClient.connectWithSigner(
-    "https://rpc.terra-classic.hexxagon.dev",
-    offlineSigner
-  );
+    const sender = accounts[0].address;
 
-    // 4️⃣ Execute contract
-    await client.execute(
-      accounts[0].address,
-      CONTRACT_ADDRESS,
-      {
-        claim: {
-          score,
-          timestamp,
-          signature: signData.signature
-        }
-      },
+    // 3️⃣ Create execute message
+    const msg = {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: {
+        sender: sender,
+        contract: CONTRACT_ADDRESS,
+        msg: new TextEncoder().encode(
+          JSON.stringify({
+            claim: {
+              score,
+              timestamp,
+              signature: signData.signature
+            }
+          })
+        ),
+        funds: []
+      }
+    };
+
+    // 4️⃣ Sign & broadcast
+    const result = await window.keplr.signAndBroadcast(
+      sender,
+      [msg],
       "auto"
     );
 
-    alert("Claim success!");
+    console.log("TX RESULT:", result);
+
+    if (result.code === 0) {
+      alert("Claim success!");
+    } else {
+      alert("Transaction failed: " + result.rawLog);
+    }
 
   } catch (error) {
     console.error("CLAIM ERROR:", error);
@@ -801,6 +811,7 @@ window.startGame = startGame;
 
 </body>
 </html>
+
 
 
 
