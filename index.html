@@ -735,17 +735,13 @@ function disconnectWallet(){
 
   try {
 
-    // 1️⃣ Timestamp sekarang
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // 2️⃣ Request signature ke backend
     const signResponse = await fetch(
       "https://benance-backend.vercel.app/api/sign",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wallet: connectedWallet,
           score: score,
@@ -763,18 +759,20 @@ function disconnectWallet(){
 
     const signature = signData.signature;
 
-    // 3️⃣ Connect ke Keplr
+    // ✅ Enable Keplr
     await window.keplr.enable("rebel-2");
 
-    const offlineSigner = window.getOfflineSigner("rebel-2");
+    // ✅ Get signer
+    const offlineSigner = window.keplr.getOfflineSigner("rebel-2");
     const accounts = await offlineSigner.getAccounts();
 
-    const client = await SigningCosmWasmClient.connectWithSigner(
+    // ✅ Connect CosmWasm client
+    const client = await window.SigningCosmWasmClient.connectWithSigner(
       "https://rpc.terra-classic.hexxagon.dev",
       offlineSigner
     );
 
-    // 4️⃣ Execute contract
+    // ✅ Execute
     const result = await client.execute(
       accounts[0].address,
       CONTRACT_ADDRESS,
@@ -785,16 +783,14 @@ function disconnectWallet(){
           signature: signature
         }
       },
-      "auto",
-      "Claim Benance Reward"
+      "auto"
     );
 
     console.log(result);
-
     alert("Claim success!");
 
   } catch (error) {
-    console.log(error);
+    console.error(error);
     alert("Claim failed");
   }
 }
@@ -803,6 +799,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
