@@ -112,9 +112,9 @@ button {
 
 <canvas id="gameCanvas"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/@cosmjs/cosmwasm-stargate@0.28.1/build/index.min.js"></script>
   
-<script type="module">
+<script>
 import { SigningCosmWasmClient } from 
 "https://esm.sh/@cosmjs/cosmwasm-stargate@0.31.3";
   
@@ -761,7 +761,7 @@ function disconnectWallet(){
 
     // 3️⃣ Connect client
     const client =
-  await SigningCosmWasmClient.connectWithSigner(
+  await window.cosmwasm.SigningCosmWasmClient.connectWithSigner(
         "https://rpc.terra-classic.hexxagon.dev",
         offlineSigner
       );
@@ -797,6 +797,7 @@ window.startGame = startGame;
 
 </body>
 </html>
+
 
 
 
