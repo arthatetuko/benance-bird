@@ -113,9 +113,12 @@ button {
 <canvas id="gameCanvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/@cosmjs/cosmwasm-stargate/build/index.min.js"></script>
 
 <script>
-
+  
+const { SigningCosmWasmClient } = window.cosmwasm;
+  
 // ===== SUPABASE =====
 const supabaseUrl = "https://ejcyqjnovijfqqxiutvb.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3lxam5vdmlqZnFxeGl1dHZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzQzNjMsImV4cCI6MjA4NzMxMDM2M30.kyVO2g-1XaY8ePMG4B6eYowH3jFGtUfLv-ar7Duhk9U";
@@ -230,6 +233,7 @@ function playScoreSound(){
 // ===== STATE =====
 const BENANCE_CONTRACT = "terra1ctvrh09s3q2tgxm88vt6zexle8wcf22qwhxe5qa2wchc9e2ynw3qhvksyl";
 const REQUIRED_BALANCE = 1000000000 * 0; // 0B BENANCE (dec 6)
+const CONTRACT_ADDRESS = "terra1ry527k7p9dkyvant890u2pgau94xqr4w0ywv8qt5qd2c5hp68gxs2ksydq";
   
 let connectedWallet=null;
 let gameRunning=false;
@@ -713,21 +717,23 @@ function disconnectWallet(){
 
   async function claimReward() {
 
-  if(!connectedWallet){
+  if (!connectedWallet) {
     alert("Wallet not connected");
     return;
   }
 
-  if(score <= 0){
+  if (score <= 0) {
     alert("Score is zero");
     return;
   }
 
-  const timestamp = Date.now();
-
   try {
 
-    const response = await fetch(
+    // 1️⃣ Timestamp sekarang
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    // 2️⃣ Request signature ke backend
+    const signResponse = await fetch(
       "https://benance-backend.vercel.app/api/sign",
       {
         method: "POST",
@@ -742,24 +748,48 @@ function disconnectWallet(){
       }
     );
 
-    const data = await response.json();
+    const signData = await signResponse.json();
 
-    if (!data.signature) {
-      alert("Signature failed");
+    if (!signData.signature) {
+      alert("Failed to get signature");
       return;
     }
 
-    console.log("Signature:", data.signature);
-    alert("Signature received. Backend working!");
-    const btn = document.getElementById("claimBtn");
-    if(btn){
-     btn.disabled = true;
-     btn.innerText = "Claimed";
-    }
+    const signature = signData.signature;
 
-  } catch (error){
+    // 3️⃣ Connect ke Keplr
+    await window.keplr.enable("rebel-2");
+
+    const offlineSigner = window.getOfflineSigner("rebel-2");
+    const accounts = await offlineSigner.getAccounts();
+
+    const client = await SigningCosmWasmClient.connectWithSigner(
+      "https://rpc.terra-classic.hexxagon.dev",
+      offlineSigner
+    );
+
+    // 4️⃣ Execute contract
+    const result = await client.execute(
+      accounts[0].address,
+      CONTRACT_ADDRESS,
+      {
+        claim: {
+          score: score,
+          timestamp: timestamp,
+          signature: signature
+        }
+      },
+      "auto",
+      "Claim Benance Reward"
+    );
+
+    console.log(result);
+
+    alert("Claim success!");
+
+  } catch (error) {
     console.log(error);
-    alert("Error connecting to backend");
+    alert("Claim failed");
   }
 }
   
@@ -767,6 +797,7 @@ function disconnectWallet(){
 
 </body>
 </html>
+
 
 
 
